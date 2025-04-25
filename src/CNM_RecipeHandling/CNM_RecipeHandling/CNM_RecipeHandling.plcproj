@@ -1,0 +1,138 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <FileVersion>1.0.0.0</FileVersion>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectGuid>{ba7e1e16-7d5b-4431-9283-82198115f976}</ProjectGuid>
+    <SubObjectsSortedByName>true</SubObjectsSortedByName>
+    <DownloadApplicationInfo>true</DownloadApplicationInfo>
+    <WriteProductVersion>false</WriteProductVersion>
+    <GenerateTpy>false</GenerateTpy>
+    <Name>CNM_RecipeHandling</Name>
+    <ProgramVersion>3.1.4026.14</ProgramVersion>
+    <Application>{7552db4b-9be2-4113-9780-21735ea33b82}</Application>
+    <TypeSystem>{330a6c7c-0db1-431d-adcd-8f193ffae13d}</TypeSystem>
+    <Implicit_Task_Info>{1cc5d686-aacf-4dc0-8103-55a8094d8351}</Implicit_Task_Info>
+    <Implicit_KindOfTask>{cdd2e39d-8fad-409b-9eb0-268b052196ba}</Implicit_KindOfTask>
+    <Implicit_Jitter_Distribution>{59d7d0af-9f7c-45e2-a563-c2f8bbf86e0b}</Implicit_Jitter_Distribution>
+    <LibraryReferences>{8d1cf053-1afb-4be6-8036-11a4d4e2c0f4}</LibraryReferences>
+    <Released>false</Released>
+    <ProjectVersion>0.0.0.0</ProjectVersion>
+    <AllowChecksForLibrary>false</AllowChecksForLibrary>
+    <POUsForPropertyAccessIncluded>true</POUsForPropertyAccessIncluded>
+    <GlobalVersionStructureIncluded>true</GlobalVersionStructureIncluded>
+    <Title>CNM Recipe Handling</Title>
+    <Company>ekvip automation GmbH</Company>
+    <LibraryCategories>
+      <LibraryCategory xmlns="">
+        <Id>{1506c6cb-5ef0-4ff5-98f9-c5353a464e9d}</Id>
+        <Version>1.2.0.0</Version>
+        <ParentCategory>
+          <Id>{0b972127-b8b0-457d-ac79-5b824eabb860}</Id>
+        </ParentCategory>
+        <DefaultName>utilities</DefaultName>
+      </LibraryCategory>
+      <LibraryCategory xmlns="">
+        <Id>{0b972127-b8b0-457d-ac79-5b824eabb860}</Id>
+        <Version>1.2.0.0</Version>
+        <ParentCategory>
+          <Id>{ca3a09bf-efcf-4b52-8a8a-b5f3031f569c}</Id>
+        </ParentCategory>
+        <DefaultName>base</DefaultName>
+      </LibraryCategory>
+      <LibraryCategory xmlns="">
+        <Id>{ca3a09bf-efcf-4b52-8a8a-b5f3031f569c}</Id>
+        <Version>1.2.0.0</Version>
+        <DefaultName>ekvip</DefaultName>
+      </LibraryCategory>
+    </LibraryCategories>
+    <SelectedLibraryCategories>
+      <Id xmlns="">{1506c6cb-5ef0-4ff5-98f9-c5353a464e9d}</Id>
+    </SelectedLibraryCategories>
+    <DefaultNamespace>CNM_RecipeHandling</DefaultNamespace>
+    <Author>tsch</Author>
+    <Description>This is a TwinCAT 3 library for recipe handling and machine settings. It is intended to be used with CNM HMI framework to store and load parameters.</Description>
+    <LanguageModelAttributeForLibrary>qualified-access-only</LanguageModelAttributeForLibrary>
+  </PropertyGroup>
+  <ItemGroup>
+    <Folder Include="Project Information" />
+    <Folder Include="Version" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Project Information\F_GetCompany.TcPOU">
+      <SubType>Code</SubType>
+      <SystemCall>true</SystemCall>
+    </Compile>
+    <Compile Include="Project Information\F_GetTitle.TcPOU">
+      <SubType>Code</SubType>
+      <SystemCall>true</SystemCall>
+    </Compile>
+    <Compile Include="Project Information\F_GetVersion.TcPOU">
+      <SubType>Code</SubType>
+      <SystemCall>true</SystemCall>
+    </Compile>
+    <Compile Include="Version\Global_Version.TcGVL">
+      <SubType>Code</SubType>
+    </Compile>
+  </ItemGroup>
+  <ProjectExtensions>
+    <PlcProjectOptions>
+      <XmlArchive>
+  <Data>
+    <o xml:space="preserve" t="OptionKey">
+      <v n="Name">"&lt;ProjectRoot&gt;"</v>
+      <d n="SubKeys" t="Hashtable" ckt="String" cvt="OptionKey">
+        <v>{29BD8D0C-3586-4548-BB48-497B9A01693F}</v>
+        <o>
+          <v n="Name">"{29BD8D0C-3586-4548-BB48-497B9A01693F}"</v>
+          <d n="SubKeys" t="Hashtable" ckt="String" cvt="OptionKey">
+            <v>Rules</v>
+            <o>
+              <v n="Name">"Rules"</v>
+              <d n="SubKeys" t="Hashtable" />
+              <d n="Values" t="Hashtable" />
+            </o>
+          </d>
+          <d n="Values" t="Hashtable" />
+        </o>
+        <v>{8A0FB252-96EB-4DCC-A5B4-B4804D05E2D6}</v>
+        <o>
+          <v n="Name">"{8A0FB252-96EB-4DCC-A5B4-B4804D05E2D6}"</v>
+          <d n="SubKeys" t="Hashtable" />
+          <d n="Values" t="Hashtable" ckt="String" cvt="Boolean">
+            <v>WriteLineIDs</v>
+            <v>False</v>
+          </d>
+        </o>
+        <v>{8F99A816-E488-41E4-9FA3-846536012284}</v>
+        <o>
+          <v n="Name">"{8F99A816-E488-41E4-9FA3-846536012284}"</v>
+          <d n="SubKeys" t="Hashtable" />
+          <d n="Values" t="Hashtable" ckt="String" cvt="String">
+            <v>DisabledWarningIds</v>
+            <v>410,5410</v>
+          </d>
+        </o>
+        <v>{F66C7017-BDD8-4114-926C-81D6D687E35F}</v>
+        <o>
+          <v n="Name">"{F66C7017-BDD8-4114-926C-81D6D687E35F}"</v>
+          <d n="SubKeys" t="Hashtable" />
+          <d n="Values" t="Hashtable" ckt="String" cvt="Boolean">
+            <v>CalcActiveTransOnly</v>
+            <v>True</v>
+          </d>
+        </o>
+      </d>
+      <d n="Values" t="Hashtable" />
+    </o>
+  </Data>
+  <TypeList>
+    <Type n="Boolean">System.Boolean</Type>
+    <Type n="Hashtable">System.Collections.Hashtable</Type>
+    <Type n="OptionKey">{54dd0eac-a6d8-46f2-8c27-2f43c7e49861}</Type>
+    <Type n="String">System.String</Type>
+  </TypeList>
+</XmlArchive>
+    </PlcProjectOptions>
+  </ProjectExtensions>
+</Project>
