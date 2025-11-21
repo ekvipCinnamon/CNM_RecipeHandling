@@ -1,0 +1,32 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1">
+  <DUT Name="Length" Id="{4b96a5c4-157e-46e7-b8b6-f09bd4acb334}">
+    <Declaration><![CDATA[(*
+
+## Short summary
+
+A datatype for distances based on physical length units. It can be converted to other units with the function CNM_RecipeHandling.ConvertLength. 
+
+.. <legal notes>
+
+legal notes
+=================
+| SPDX-FileCopyrightText: © 2025 ekvip automation GmbH <info@ekvip.de>
+| SPDX-License-Identifier: Apache-2.0
+| For details check: Apache-2.0_
+
+.. _Apache-2.0: https://www.apache.org/licenses/LICENSE-2.0
+
+.. </legal notes>	
+
+*)
+
+TYPE Length EXTENDS MetricParameter:
+STRUCT
+	(* the length unit *)
+	unit :LengthUnit := LengthUnit.METER;
+END_STRUCT
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

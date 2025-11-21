@@ -1,0 +1,32 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1">
+  <DUT Name="Temperature" Id="{b2d0bebb-e1ec-447b-bd8c-0cd07e6ee96f}">
+    <Declaration><![CDATA[(*
+
+## Short summary
+
+A datatype for temperatures based on temperature scales. It can be converted to other units with the function CNM_RecipeHandling.ConvertTemperature. 
+
+.. <legal notes>
+
+legal notes
+=================
+| SPDX-FileCopyrightText: © 2025 ekvip automation GmbH <info@ekvip.de>
+| SPDX-License-Identifier: Apache-2.0
+| For details check: Apache-2.0_
+
+.. _Apache-2.0: https://www.apache.org/licenses/LICENSE-2.0
+
+.. </legal notes>	
+
+*)
+
+TYPE Temperature EXTENDS BaseParameter:
+STRUCT
+	(* the temperature scale *)
+	unit :TemperatureUnit := TemperatureUnit.KELVIN;
+END_STRUCT
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

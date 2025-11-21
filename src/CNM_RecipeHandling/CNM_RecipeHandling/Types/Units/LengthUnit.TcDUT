@@ -1,0 +1,38 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1">
+  <DUT Name="LengthUnit" Id="{1f1578aa-844f-490b-bc8d-5881ecf9f755}">
+    <Declaration><![CDATA[(*
+
+## Short summary
+
+This enumeration contains common physical length units.
+
+.. <legal notes>
+
+legal notes
+=================
+| SPDX-FileCopyrightText: © 2025 ekvip automation GmbH <info@ekvip.de>
+| SPDX-License-Identifier: Apache-2.0
+| For details check: Apache-2.0_
+
+.. _Apache-2.0: https://www.apache.org/licenses/LICENSE-2.0
+
+.. </legal notes>	
+
+*)
+
+{attribute 'qualified_only'}
+{attribute 'to_string'}
+TYPE LengthUnit :
+(
+	METER := 0,
+	US_MIL,
+	US_INCH,
+	US_FOOT,
+	US_YARD,
+	US_MILE	
+);
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

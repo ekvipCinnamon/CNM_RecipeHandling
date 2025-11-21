@@ -1,0 +1,27 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1">
+  <DUT Name="UnitString" Id="{cbd0c67a-14bc-4283-8bc4-9a617bf33c93}">
+    <Declaration><![CDATA[(*
+
+## Short summary
+
+The UnitString is an alias for a string with a limited amount of characters. 
+
+.. <legal notes>
+
+legal notes
+=================
+| SPDX-FileCopyrightText: © 2025 ekvip automation GmbH <info@ekvip.de>
+| SPDX-License-Identifier: Apache-2.0
+| For details check: Apache-2.0_
+
+.. _Apache-2.0: https://www.apache.org/licenses/LICENSE-2.0
+
+.. </legal notes>	
+
+*)
+
+TYPE UnitString : STRING(10); END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

@@ -1,0 +1,39 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1">
+  <POU Name="CheckValueIsANumber" Id="{ea67e11a-bd70-4f3e-8aa5-c6b69df85536}" SpecialFunc="None">
+    <Declaration><![CDATA[(*
+
+## Short summary
+
+This function checks if the given LREAL is a valid number to calculate with.
+
+.. <legal notes>
+
+legal notes
+=================
+| SPDX-FileCopyrightText: © 2025 ekvip automation GmbH <info@ekvip.de>
+| SPDX-License-Identifier: Apache-2.0
+| For details check: Apache-2.0_
+
+.. _Apache-2.0: https://www.apache.org/licenses/LICENSE-2.0
+
+.. </legal notes>
+
+
+
+**Return:** TRUE if the value is processable, FALSE if NaN or +/-Inf
+	
+*)
+
+FUNCTION INTERNAL CheckValueIsANumber : BOOL
+VAR_INPUT 
+	(* the folating point that should be checked *)
+	value :LREAL;
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[CheckValueIsANumber := (NOT Tc2_Utilities.LrealIsNaN(value)) AND_THEN Tc2_Utilities.LrealIsFinite(value); 
+]]></ST>
+    </Implementation>
+  </POU>
+</TcPlcObject>

@@ -1,0 +1,64 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1">
+  <POU Name="ConvertDuration" Id="{8a3a0c54-ec05-4117-aa96-4a29e84875dd}" SpecialFunc="None">
+    <Declaration><![CDATA[(*
+
+## Short summary
+
+This function can be used to convert durations from one physical time unit into another. The value will change corresponding to the conversion.
+**Example:**  
+15 s =  0.25 min = 0.00416667 h = 0.00017361125 days = 2.4801607143e-5 weeks 
+
+.. <legal notes>
+
+legal notes
+=================
+| SPDX-FileCopyrightText: © 2025 ekvip automation GmbH <info@ekvip.de>
+| SPDX-License-Identifier: Apache-2.0
+| For details check: Apache-2.0_
+
+.. _Apache-2.0: https://www.apache.org/licenses/LICENSE-2.0
+
+.. </legal notes>
+
+
+
+**Return:** CNM_RecipeHandling.Duration: a copy of the given duration converted into the desired unit
+	
+
+*)
+
+FUNCTION ConvertDuration : Duration
+VAR_IN_OUT CONSTANT
+	(* the duration that should be converted *)
+	durationToConvert :Duration;
+END_VAR
+VAR_INPUT
+	(* the physical time unit it should be converted to *)
+	convertTo :DurationUnit := DurationUnit.SECONDS;
+	(* the metrical prefix (for SI units) *)
+	resultPrefix :MetricPrefixes := MetricPrefixes.NONE;
+END_VAR
+VAR
+	factor :LREAL;
+	exponent :INT := 1;
+END_VAR
+VAR CONSTANT
+	(* duration convertions related to seconds *)
+	DURATIONS : ARRAY[DurationUnit.SECONDS..DurationUnit.WEEK] OF LREAL := [1.0, 60.0, 3600.0, 86400.0, 604800.0];
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[factor := DURATIONS[durationToConvert.unit] / DURATIONS[convertTo];
+exponent := durationToConvert.prefix - resultPrefix;
+ConvertDuration.prefix := resultPrefix;
+ConvertDuration.unit := convertTo;
+IF CheckValueIsANumber(durationToConvert.value) THEN
+	ConvertDuration.value := durationToConvert.value * factor * FastPow10(exponent);
+ELSE
+	ConvertDuration.value := durationToConvert.value;
+END_IF
+]]></ST>
+    </Implementation>
+  </POU>
+</TcPlcObject>

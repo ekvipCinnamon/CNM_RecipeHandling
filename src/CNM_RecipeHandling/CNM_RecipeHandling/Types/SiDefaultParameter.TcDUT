@@ -1,0 +1,31 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1">
+  <DUT Name="SiDefaultParameter" Id="{501ade00-0a9d-4003-a242-d6cf87b2ead0}">
+    <Declaration><![CDATA[(*
+
+## Short summary
+
+A datatype for temperatures based on temperature scales. It can be converted to other units with the function CNM_RecipeHandling.ConvertTemperature. 
+
+.. <legal notes>
+
+legal notes
+=================
+| SPDX-FileCopyrightText: © 2025 ekvip automation GmbH <info@ekvip.de>
+| SPDX-License-Identifier: Apache-2.0
+| For details check: Apache-2.0_
+
+.. _Apache-2.0: https://www.apache.org/licenses/LICENSE-2.0
+
+.. </legal notes>	
+
+*)
+
+TYPE SiDefaultParameter EXTENDS MetricParameter :
+STRUCT
+	unit :UnitString;
+END_STRUCT
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

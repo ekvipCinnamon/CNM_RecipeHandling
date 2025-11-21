@@ -1,6 +1,11 @@
 <?xml version="1.0"?>
 <TcSmProject xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://www.beckhoff.com/schemas/2012/07/TcSmProject" TcSmVersion="1.0" TcVersion="3.1.4026.14">
 	<Project ProjectGUID="{AB3D8913-B01E-45F6-A28C-AF42E298255B}" Target64Bit="true" ShowHideConfigurations="#x3c7">
+		<System>
+			<TypeSystem>
+				<AdditionalTmcFile Name="Alarms" File="Alarms.tmc"/>
+			</TypeSystem>
+		</System>
 		<Plc>
 			<Project File="CNM_RecipeHandling.xti"/>
 		</Plc>

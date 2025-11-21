@@ -1,0 +1,68 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1">
+  <POU Name="FastPow10" Id="{a606cd19-b022-428d-aa93-d25735a769d0}" SpecialFunc="None">
+    <Declaration><![CDATA[(*
+
+## Short summary
+
+This function calculates the power of ten with the given exponent efficiently using exponentiation by squaring for exponents > 3. 
+It supports both positive and negative integer exponents.
+
+.. <legal notes>
+
+legal notes
+=================
+| SPDX-FileCopyrightText: © 2025 ekvip automation GmbH <info@ekvip.de>
+| SPDX-License-Identifier: Apache-2.0
+| For details check: Apache-2.0_
+
+.. _Apache-2.0: https://www.apache.org/licenses/LICENSE-2.0
+
+.. </legal notes>
+
+
+
+**Return:** the power of 10 for the given exponent as LREAL 
+*)
+
+FUNCTION FastPow10 : LREAL
+VAR_INPUT
+	(* The exponent to which the base is raised. Can be positive or negative. *)
+	exponent :INT;
+END_VAR
+VAR
+	calcExponent :WORD := 1;
+	mask :INT;
+	base :LREAL := 10.0;
+END_VAR
+VAR CONSTANT
+	SMALL_POWERS : ARRAY[0..3] OF LREAL := [1.0, 10.0, 100.0, 1000.0];
+END_VAR]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[// get absolute value of exponent
+mask := SHR(exponent, SIZEOF(INT)*8 - 1);
+{warning disable C0195} // conversion from INT to UINT desired, this is an ABS(exponent)
+calcExponent := (exponent + mask) XOR mask;
+{warning restore C0195}
+// for small exponents use the mapping
+IF (calcExponent <= 3) THEN
+	FastPow10 := SMALL_POWERS[calcExponent];
+ELSE
+// with great power comes great potential for optimization lol :) 
+	// exponentation by squaring, needs less multiplications then EXPT for exponents > 3
+	FastPow10 := 1.0;
+	WHILE (calcExponent > 0) DO
+		IF ((calcExponent AND 1) = 1) THEN
+			FastPow10 := FastPow10 * base;	
+		END_IF
+		base := base * base;
+		calcExponent := SHR(calcExponent,1); 
+	END_WHILE
+END_IF
+// inverse it if exponent was negative
+FastPow10 := SEL((exponent > 0), 1 / FastPow10, FastPow10);
+
+]]></ST>
+    </Implementation>
+  </POU>
+</TcPlcObject>

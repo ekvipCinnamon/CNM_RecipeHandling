@@ -1,0 +1,67 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1">
+  <POU Name="ConvertPressure" Id="{8731749e-eef2-45fe-ad32-62fcb211963b}" SpecialFunc="None">
+    <Declaration><![CDATA[(*
+
+## Short summary
+
+This function can be used to convert pressures from one physical pressure unit into another. The value will change corresponding to the conversion.
+**Example:**  
+1 Pa =  0.00001 Bar = 0.000145038 Psi
+
+.. <legal notes>
+
+legal notes
+=================
+| SPDX-FileCopyrightText: © 2025 ekvip automation GmbH <info@ekvip.de>
+| SPDX-License-Identifier: Apache-2.0
+| For details check: Apache-2.0_
+
+.. _Apache-2.0: https://www.apache.org/licenses/LICENSE-2.0
+
+.. </legal notes>
+
+
+
+**Return:** CNM_RecipeHandling.Pressure: a copy of the given pressure converted into the desired unit
+	
+
+*)
+
+FUNCTION ConvertPressure : Pressure
+VAR_IN_OUT CONSTANT
+	(* the pressure that should be converted *)
+	pressureToConvert :Pressure;
+END_VAR
+VAR_INPUT
+	(* the physical pressure unit it should be converted to *)
+	convertTo :PressureUnit := PressureUnit.PASCAL;
+	(* the metrical prefix (for SI units) *)
+	resultPrefix :MetricPrefixes := MetricPrefixes.NONE;
+END_VAR
+VAR
+	factor :LREAL;
+	exponent :INT := 1;
+END_VAR
+VAR CONSTANT
+	(* length convertions related to pascal *)
+	PRESSURES : ARRAY[PressureUnit.PASCAL..PressureUnit.PSI] OF LREAL := [1.0, 100000.0, 6894.76];
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[factor := PRESSURES[pressureToConvert.unit] / PRESSURES[convertTo];
+exponent := pressureToConvert.prefix - resultPrefix;
+ConvertPressure.prefix := resultPrefix;
+ConvertPressure.unit := convertTo;
+IF CheckValueIsANumber(pressureToConvert.value) THEN
+	ConvertPressure.value := pressureToConvert.value * factor * FastPow10(exponent);	
+ELSE
+	ConvertPressure.value := pressureToConvert.value;
+END_IF
+
+
+
+]]></ST>
+    </Implementation>
+  </POU>
+</TcPlcObject>

@@ -1,0 +1,37 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1">
+  <DUT Name="AreaUnit" Id="{4bd8d089-9c8f-4436-953a-2d996ccde540}">
+    <Declaration><![CDATA[(*
+
+## Short summary
+
+This enumeration contains common physical area units.
+
+.. <legal notes>
+
+legal notes
+=================
+| SPDX-FileCopyrightText: © 2025 ekvip automation GmbH <info@ekvip.de>
+| SPDX-License-Identifier: Apache-2.0
+| For details check: Apache-2.0_
+
+.. _Apache-2.0: https://www.apache.org/licenses/LICENSE-2.0
+
+.. </legal notes>	
+
+*)
+{attribute 'qualified_only'}
+{attribute 'to_string'}
+TYPE AreaUnit :
+(
+	SQUARE_METER := 0,
+	US_SQUARE_INCH,
+	US_SQUARE_FOOT,
+	US_SQUARE_YARD,
+	US_ACRE,
+	HECTARE
+);
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

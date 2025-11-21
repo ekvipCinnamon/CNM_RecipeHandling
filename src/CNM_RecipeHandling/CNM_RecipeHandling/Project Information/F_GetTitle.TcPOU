@@ -10,7 +10,7 @@ VAR_INPUT
 	
 END_VAR]]></Declaration>
     <Implementation>
-      <ST><![CDATA[F_GetTitle := "CNM Recipe Handling";
+      <ST><![CDATA[F_GetTitle := "CNM_RecipeHandling";
 ]]></ST>
     </Implementation>
   </POU>

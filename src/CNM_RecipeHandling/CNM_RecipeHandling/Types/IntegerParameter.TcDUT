@@ -1,0 +1,18 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1">
+  <DUT Name="IntegerParameter" Id="{f65d7bc6-e838-4f7a-8a9a-b6f5850124b5}">
+    <Declaration><![CDATA[TYPE IntegerParameter :
+STRUCT
+	(* the lower limit of the allowed range *)
+	lowerLimit :DINT := 0;
+	(* the upper limit of the allowed range *)
+	upperLimit :DINT := 0;
+	(* the physical unit *)
+	unit :UnitString;
+	(* the actual parameter value *)
+	value :DINT := 0;
+END_STRUCT
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

@@ -1,0 +1,13 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1">
+  <POU Name="MAIN" Id="{e2000657-0558-4cd5-b540-68f1b2db8ff5}" SpecialFunc="None">
+    <Declaration><![CDATA[PROGRAM MAIN
+VAR
+	testConversion : UnitConversion_TestSuite;
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[TcUnit.RUN_IN_SEQUENCE();]]></ST>
+    </Implementation>
+  </POU>
+</TcPlcObject>

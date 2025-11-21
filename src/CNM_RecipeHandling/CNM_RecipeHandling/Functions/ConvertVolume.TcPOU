@@ -1,0 +1,94 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1">
+  <POU Name="ConvertVolume" Id="{6991662c-e3a5-4ce9-9ae5-a1fb9147b73f}" SpecialFunc="None">
+    <Declaration><![CDATA[(*
+
+## Short summary
+
+This function can be used to convert volumes from one physical unit into another. The value will change corresponding to the conversion.
+**Example:**  
+15 cubic meter = 15000 liter = 915356 cubic inches = 529.7199 cubic feet = 19.6193 cubic yard = 507211.39315817 fluid ounces = 31700.7121 cubic pints = 1816.17 dry pints
+
+.. <legal notes>
+
+legal notes
+=================
+| SPDX-FileCopyrightText: © 2025 ekvip automation GmbH <info@ekvip.de>
+| SPDX-License-Identifier: Apache-2.0
+| For details check: Apache-2.0_
+
+.. _Apache-2.0: https://www.apache.org/licenses/LICENSE-2.0
+
+.. </legal notes>
+
+
+
+**Return:** CNM_RecipeHandling.Volume: a copy of the given volume converted into the desired unit
+
+*)
+
+FUNCTION ConvertVolume :Volume
+VAR_IN_OUT CONSTANT
+	(* the volume that should be converted *)
+	volumeToConvert :Volume;
+END_VAR
+VAR_INPUT
+	(* the physical volume unit it should be converted to *)
+	convertTo :VolumeUnit := VolumeUnit.CUBIC_METER;
+	(* the metrical prefix (for SI units) *)
+	resultPrefix :MetricPrefixes := MetricPrefixes.NONE;
+END_VAR
+VAR
+	factor :LREAL;
+	exponent :INT := 1;
+END_VAR
+VAR CONSTANT
+	(* area convertions related to cubicmeter: square inch, square foot, square yard, acre *)
+	VOLUMES : ARRAY[VolumeUnit.CUBIC_METER..VolumeUnit.US_DRY_BARREL ] OF LREAL := [ 
+		1.0,  			// in cubic meter
+		0.001, 			// in liter
+		1.6387E-5, 		// in cubic inch
+		0.0283168, 		// in cubic foot
+		0.764555, 		// in cubic yard
+		2.9573549E-5, 	// in fluid ounce 
+		0.000473176, 	// in us pint
+		0.00378541, 	// in us gallon
+		0.11924, 		// in us barrel
+		0.1589872949,		// in us oil barrel
+		0.00055061, 	// in us dry pint
+		0.00440488, 	// in us dry gallon
+		0.115627 		// in us dry barrel
+	];
+	(* mapping that returns the correct exponentiation factor for cubic or linear units *)
+	UNIT_SPECIFIC_FACTOR :ARRAY[VolumeUnit.CUBIC_METER..VolumeUnit.US_DRY_BARREL] OF USINT := [	
+		3,  		// in cubic meter
+		1, 		// in liter
+		3, 		// in cubic inch
+		3, 		// in cubic foot
+		3, 		// in cubic yard
+		1, 		// in fluid ounce
+		1, 		// in us pint
+		1, 		// in us gallon
+		1, 		// in us barrel
+		1, 		// in us oil barrel
+		1, 		// in us dry pint
+		1, 		// in us dry gallon
+		1 		// in us dry barrel
+	]; 
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[factor := VOLUMES[volumeToConvert.unit] / VOLUMES[convertTo];
+exponent := ((UNIT_SPECIFIC_FACTOR[volumeToConvert.unit] * volumeToConvert.prefix) 
+			- (UNIT_SPECIFIC_FACTOR[convertTo] *  resultPrefix));
+ConvertVolume.prefix := resultPrefix;
+ConvertVolume.unit := convertTo;
+IF CheckValueIsANumber(volumeToConvert.value) THEN
+	ConvertVolume.value := volumeToConvert.value * factor * FastPow10(exponent);
+ELSE
+	ConvertVolume.value := volumeToConvert.value;
+END_IF
+]]></ST>
+    </Implementation>
+  </POU>
+</TcPlcObject>

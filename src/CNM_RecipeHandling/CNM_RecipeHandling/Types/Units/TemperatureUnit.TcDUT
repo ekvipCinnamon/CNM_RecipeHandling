@@ -1,0 +1,35 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1">
+  <DUT Name="TemperatureUnit" Id="{2b50ecd4-664e-4951-b740-a1c03ec3a3cf}">
+    <Declaration><![CDATA[(*
+
+## Short summary
+
+This enumeration contains common temperature scales.
+
+.. <legal notes>
+
+legal notes
+=================
+| SPDX-FileCopyrightText: © 2025 ekvip automation GmbH <info@ekvip.de>
+| SPDX-License-Identifier: Apache-2.0
+| For details check: Apache-2.0_
+
+.. _Apache-2.0: https://www.apache.org/licenses/LICENSE-2.0
+
+.. </legal notes>	
+
+*)
+
+{attribute 'qualified_only'}
+{attribute 'to_string'}
+TYPE TemperatureUnit :
+(
+	KELVIN := 0,
+	DEGREE_CELSIUS,
+	DEGREE_FAHRENHEIT
+);
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

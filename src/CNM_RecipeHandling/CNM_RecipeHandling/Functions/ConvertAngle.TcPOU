@@ -1,0 +1,67 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1">
+  <POU Name="ConvertAngle" Id="{150d8fa3-afa5-4eb7-8e48-4b57f23c369a}" SpecialFunc="None">
+    <Declaration><![CDATA[(*
+
+## Short summary
+
+This function can be used to convert angles from one angular unit into another. The value will change corresponding to the conversion.
+**Example:** 
+π radians = 180° = 10800' = 648000" = 200 gradians = 0.5 turns
+
+.. <legal notes>
+
+legal notes
+=================
+| SPDX-FileCopyrightText: © 2025 ekvip automation GmbH <info@ekvip.de>
+| SPDX-License-Identifier: Apache-2.0
+| For details check: Apache-2.0_
+
+.. _Apache-2.0: https://www.apache.org/licenses/LICENSE-2.0
+
+.. </legal notes>
+
+
+
+**Return:** CNM_RecipeHandling.Angle: a copy of the given angle converted into the desired unit
+	
+
+*)
+
+FUNCTION ConvertAngle : Angle
+VAR_IN_OUT CONSTANT
+	(* the angle that should be converted *)
+	angleToConvert :Angle;
+END_VAR
+VAR_INPUT
+	(* the angular unit it should be converted to *)
+	convertTo :AngleUnit := AngleUnit.RADIANS;
+END_VAR
+VAR
+	factor :LREAL;
+END_VAR
+VAR CONSTANT
+	PI :LREAL := 3.14159265358979323846264338327950288;
+	(* angle conversions related to radians (base unit) *)
+	ANGLES : ARRAY[AngleUnit.RADIANS..AngleUnit.TURNS] OF LREAL := [
+		1.0,								// RADIANS (base unit)
+		PI / 180.0,							// DEGREES to radians
+		PI / 10800.0,						// ARC_MINUTES to radians
+		PI / 648000.0,						// ARC_SECONDS to radians
+		PI / 200.0,							// GRADIANS to radians
+		2.0 * PI							// TURNS to radians
+	];
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[factor := ANGLES[angleToConvert.unit] / ANGLES[convertTo];
+ConvertAngle.unit := convertTo;
+IF CheckValueIsANumber(angleToConvert.value) THEN
+	ConvertAngle.value := angleToConvert.value * factor;
+ELSE
+	ConvertAngle.value := angleToConvert.value;
+END_IF
+]]></ST>
+    </Implementation>
+  </POU>
+</TcPlcObject>

@@ -1,0 +1,84 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1">
+  <POU Name="ConvertAngularVelocity" Id="{7ca96b9c-0f24-4ff1-8760-12dd24337b89}" SpecialFunc="None">
+    <Declaration><![CDATA[(*
+## Short summary
+
+This function converts angular velocities from one unit into another.
+The value is adjusted according to the unit conversion factors.
+
+**Example:**
+1 turn/min = 6.28319 rad/min = 0.10472 rad/s = 360 deg/min = 6 deg/s
+
+.. <legal notes>
+
+legal notes
+=================
+| SPDX-FileCopyrightText: © 2025 ekvip automation GmbH <info@ekvip.de>
+| SPDX-License-Identifier: Apache-2.0
+| For details check: Apache-2.0_
+
+.. _Apache-2.0: https://www.apache.org/licenses/LICENSE-2.0
+
+.. </legal notes>
+
+
+
+**Return:** CNM_RecipeHandling.AngularVelocity: a copy of the given angular velocity converted into the desired unit
+
+*)
+FUNCTION ConvertAngularVelocity :AngularVelocity
+VAR_IN_OUT CONSTANT
+    (* the angular velocity that should be converted *)
+    angularVelocityToConvert :AngularVelocity;
+END_VAR
+VAR_INPUT
+    (* the physical angle unit it should be converted to *)
+    convertAngleTo :AngleUnit := AngleUnit.TURNS;
+    (* the physical time unit it should be converted to *)
+    convertTimeTo :DurationUnit := DurationUnit.MINUTE;
+    (* the metrical prefix for the time *)
+    resultPrefixTime :MetricPrefixes := MetricPrefixes.NONE;
+END_VAR
+VAR
+    factorAngle, factorTime : LREAL;
+    exponent : INT := 1;
+END_VAR
+VAR CONSTANT
+	PI :LREAL := 3.14159265358979323846264338327950288;
+	(* angle conversions related to radians (base unit) *)
+	ANGLES : ARRAY[AngleUnit.RADIANS..AngleUnit.TURNS] OF LREAL := [
+		1.0,								// RADIANS (base unit)
+		PI / 180.0,							// DEGREES to radians
+		PI / 10800.0,						// ARC_MINUTES to radians
+		PI / 648000.0,						// ARC_SECONDS to radians
+		PI / 200.0,							// GRADIANS to radians
+		2.0 * PI							// TURNS to radians
+	];
+    (* duration conversions related to second *)
+    DURATIONS : ARRAY[DurationUnit.SECONDS..DurationUnit.WEEK] OF LREAL := [1.0, 60.0, 3600.0, 86400.0, 604800.0];
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[(* calculate conversion factors *)
+factorAngle := ANGLES[angularVelocityToConvert.angularDistanceUnit] / ANGLES[convertAngleTo];
+factorTime := DURATIONS[angularVelocityToConvert.timeUnit] / DURATIONS[convertTimeTo];
+
+(* apply metric prefix scaling, same logic as ConvertVelocity *)
+exponent := resultPrefixTime - angularVelocityToConvert.timePrefix;
+
+(* assign target units *)
+ConvertAngularVelocity.angularDistanceUnit := convertAngleTo;
+ConvertAngularVelocity.timeUnit := convertTimeTo;
+ConvertAngularVelocity.timePrefix := resultPrefixTime;
+
+(* perform conversion if the value is valid *)
+IF CheckValueIsANumber(angularVelocityToConvert.value) THEN
+	ConvertAngularVelocity.value := angularVelocityToConvert.value * factorAngle / factorTime * FastPow10(exponent);
+ELSE
+	ConvertAngularVelocity.value := angularVelocityToConvert.value;
+END_IF
+]]></ST>
+    </Implementation>
+  </POU>
+</TcPlcObject>

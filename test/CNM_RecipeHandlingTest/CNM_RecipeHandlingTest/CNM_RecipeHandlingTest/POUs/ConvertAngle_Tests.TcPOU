@@ -1,0 +1,235 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1">
+  <POU Name="ConvertAngle_Tests" Id="{d8a4f9b2-1c5e-4d89-b123-456789abcdef}" SpecialFunc="None">
+    <Declaration><![CDATA[(*
+
+short summary
+==================
+Unit tests for angle unit conversions including radians, degrees, 
+arc minutes, arc seconds, gradians, and turns.
+
+.. <legal notes>
+
+legal notes
+=================
+| SPDX-FileCopyrightText: © 2025 ekvip automation GmbH <info@ekvip.de>
+| SPDX-License-Identifier: Apache-2.0
+| For details check: Apache-2.0_
+
+.. _Apache-2.0: https://www.apache.org/licenses/LICENSE-2.0
+
+.. </legal notes>
+
+*)
+
+METHOD runConvertAngle
+VAR
+	angleToConvert : CNM_RecipeHandling.Angle;
+	result : CNM_RecipeHandling.Angle;
+	NAN :LREAL := LREAL#1#7FF8000000000000;
+	INF :LREAL := LREAL#1#7FF0000000000000;
+	MINUS_INF :LREAL := LREAL#1#FFF0000000000000;
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[// Test 1: Radians to Degrees
+TEST('Convert Radians to Degrees');
+angleToConvert.value := 3.14159265358979323846;
+angleToConvert.unit := CNM_RecipeHandling.AngleUnit.RADIANS;
+result := CNM_RecipeHandling.ConvertAngle(angleToConvert, CNM_RecipeHandling.AngleUnit.DEGREES);
+AssertEquals_LREAL(
+	Expected := 180.0,
+	Actual := result.value,
+	Delta := 0.0001,
+	Message := 'π radians should equal 180 degrees'
+);
+AssertEquals(
+	Expected := CNM_RecipeHandling.AngleUnit.DEGREES,
+	Actual := result.unit,
+	Message := 'Unit should be DEGREES'
+);
+TEST_FINISHED();
+
+// Test 2: Degrees to Arc Minutes
+TEST('Convert Degrees to Arc Minutes');
+angleToConvert.value := 1.0;
+angleToConvert.unit := CNM_RecipeHandling.AngleUnit.DEGREES;
+result := CNM_RecipeHandling.ConvertAngle(angleToConvert, CNM_RecipeHandling.AngleUnit.ARC_MINUTES);
+AssertEquals_LREAL(
+	Expected := 60.0,
+	Actual := result.value,
+	Delta := 0.0001,
+	Message := '1 degree should equal 60 arc minutes'
+);
+TEST_FINISHED();
+
+// Test 3: Arc Minutes to Arc Seconds
+TEST('Convert Arc Minutes to Arc Seconds');
+angleToConvert.value := 1.0;
+angleToConvert.unit := CNM_RecipeHandling.AngleUnit.ARC_MINUTES;
+result := CNM_RecipeHandling.ConvertAngle(angleToConvert, CNM_RecipeHandling.AngleUnit.ARC_SECONDS);
+AssertEquals_LREAL(
+	Expected := 60.0,
+	Actual := result.value,
+	Delta := 0.0001,
+	Message := '1 arc minute should equal 60 arc seconds'
+);
+TEST_FINISHED();
+
+// Test 4: Degrees to Arc Seconds
+TEST('Convert Degrees to Arc Seconds');
+angleToConvert.value := 1.0;
+angleToConvert.unit := CNM_RecipeHandling.AngleUnit.DEGREES;
+result := CNM_RecipeHandling.ConvertAngle(angleToConvert, CNM_RecipeHandling.AngleUnit.ARC_SECONDS);
+AssertEquals_LREAL(
+	Expected := 3600.0,
+	Actual := result.value,
+	Delta := 0.01,
+	Message := '1 degree should equal 3600 arc seconds'
+);
+TEST_FINISHED();
+
+// Test 5: Arc Seconds to Degrees
+TEST('Convert Arc Seconds to Degrees');
+angleToConvert.value := 3600.0;
+angleToConvert.unit := CNM_RecipeHandling.AngleUnit.ARC_SECONDS;
+result := CNM_RecipeHandling.ConvertAngle(angleToConvert, CNM_RecipeHandling.AngleUnit.DEGREES);
+AssertEquals_LREAL(
+	Expected := 1.0,
+	Actual := result.value,
+	Delta := 0.0001,
+	Message := '3600 arc seconds should equal 1 degree'
+);
+TEST_FINISHED();
+
+// Test 6: Radians to Arc Minutes
+TEST('Convert Radians to Arc Minutes');
+angleToConvert.value := 3.14159265358979323846;
+angleToConvert.unit := CNM_RecipeHandling.AngleUnit.RADIANS;
+result := CNM_RecipeHandling.ConvertAngle(angleToConvert, CNM_RecipeHandling.AngleUnit.ARC_MINUTES);
+AssertEquals_LREAL(
+	Expected := 10800.0,
+	Actual := result.value,
+	Delta := 0.1,
+	Message := 'π radians should equal 10800 arc minutes'
+);
+TEST_FINISHED();
+
+// Test 7: Radians to Arc Seconds
+TEST('Convert Radians to Arc Seconds');
+angleToConvert.value := 3.14159265358979323846;
+angleToConvert.unit := CNM_RecipeHandling.AngleUnit.RADIANS;
+result := CNM_RecipeHandling.ConvertAngle(angleToConvert, CNM_RecipeHandling.AngleUnit.ARC_SECONDS);
+AssertEquals_LREAL(
+	Expected := 648000.0,
+	Actual := result.value,
+	Delta := 1.0,
+	Message := 'π radians should equal 648000 arc seconds'
+);
+TEST_FINISHED();
+
+// Test 8: Gradians to Degrees
+TEST('Convert Gradians to Degrees');
+angleToConvert.value := 100.0;
+angleToConvert.unit := CNM_RecipeHandling.AngleUnit.GRADIANS;
+result := CNM_RecipeHandling.ConvertAngle(angleToConvert, CNM_RecipeHandling.AngleUnit.DEGREES);
+AssertEquals_LREAL(
+	Expected := 90.0,
+	Actual := result.value,
+	Delta := 0.0001,
+	Message := '100 gradians should equal 90 degrees'
+);
+TEST_FINISHED();
+
+// Test 9: Turns to Degrees
+TEST('Convert Turns to Degrees');
+angleToConvert.value := 0.5;
+angleToConvert.unit := CNM_RecipeHandling.AngleUnit.TURNS;
+result := CNM_RecipeHandling.ConvertAngle(angleToConvert, CNM_RecipeHandling.AngleUnit.DEGREES);
+AssertEquals_LREAL(
+	Expected := 180.0,
+	Actual := result.value,
+	Delta := 0.0001,
+	Message := '0.5 turns should equal 180 degrees'
+);
+TEST_FINISHED();
+
+// Test 10: Zero Angle
+TEST('Convert Zero Angle');
+angleToConvert.value := 0.0;
+angleToConvert.unit := CNM_RecipeHandling.AngleUnit.DEGREES;
+result := CNM_RecipeHandling.ConvertAngle(angleToConvert, CNM_RecipeHandling.AngleUnit.RADIANS);
+AssertEquals_LREAL(
+	Expected := 0.0,
+	Actual := result.value,
+	Delta := 0.0001,
+	Message := '0 degrees should equal 0 radians'
+);
+TEST_FINISHED();
+
+// Test 11: Negative Angle
+TEST('Convert Negative Angle');
+angleToConvert.value := -90.0;
+angleToConvert.unit := CNM_RecipeHandling.AngleUnit.DEGREES;
+result := CNM_RecipeHandling.ConvertAngle(angleToConvert, CNM_RecipeHandling.AngleUnit.RADIANS);
+AssertEquals_LREAL(
+	Expected := -1.5707963267948966,
+	Actual := result.value,
+	Delta := 0.0001,
+	Message := '-90 degrees should equal -π/2 radians'
+);
+TEST_FINISHED();
+
+// Test 12: NaN Handling
+TEST('Handle NaN');
+angleToConvert.value := NAN;
+angleToConvert.unit := CNM_RecipeHandling.AngleUnit.DEGREES;
+result := CNM_RecipeHandling.ConvertAngle(angleToConvert, CNM_RecipeHandling.AngleUnit.RADIANS);
+AssertTrue(
+	Condition := ISNAN(result.value),
+	Message := 'NaN should be preserved in conversion'
+);
+TEST_FINISHED();
+
+// Test 13: Infinity Handling
+TEST('Handle Infinity');
+angleToConvert.value := INF;
+angleToConvert.unit := CNM_RecipeHandling.AngleUnit.DEGREES;
+result := CNM_RecipeHandling.ConvertAngle(angleToConvert, CNM_RecipeHandling.AngleUnit.RADIANS);
+AssertEquals_LREAL(
+	Expected := INF,
+	Actual := result.value,
+	Delta := 0.0,
+	Message := 'Infinity should be preserved in conversion'
+);
+TEST_FINISHED();
+
+// Test 14: Full Circle Conversion
+TEST('Convert Full Circle');
+angleToConvert.value := 360.0;
+angleToConvert.unit := CNM_RecipeHandling.AngleUnit.DEGREES;
+result := CNM_RecipeHandling.ConvertAngle(angleToConvert, CNM_RecipeHandling.AngleUnit.TURNS);
+AssertEquals_LREAL(
+	Expected := 1.0,
+	Actual := result.value,
+	Delta := 0.0001,
+	Message := '360 degrees should equal 1 turn'
+);
+TEST_FINISHED();
+
+// Test 15: Arc Minutes to Radians
+TEST('Convert Arc Minutes to Radians');
+angleToConvert.value := 10800.0;
+angleToConvert.unit := CNM_RecipeHandling.AngleUnit.ARC_MINUTES;
+result := CNM_RecipeHandling.ConvertAngle(angleToConvert, CNM_RecipeHandling.AngleUnit.RADIANS);
+AssertEquals_LREAL(
+	Expected := 3.14159265358979323846,
+	Actual := result.value,
+	Delta := 0.0001,
+	Message := '10800 arc minutes should equal π radians'
+);
+TEST_FINISHED();
+]]></ST>
+    </Implementation>
+  </POU>
+</TcPlcObject>

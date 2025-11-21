@@ -1,0 +1,5232 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1">
+  <POU Name="UnitConversion_TestSuite" Id="{229802a7-ee67-4c95-87da-f7039b8f1c7c}" SpecialFunc="None">
+    <Declaration><![CDATA[(*
+
+short summary
+==================
+This class tests all methods of convertion assertions
+with various combinations of inputs and checks expected 
+outputs are satisfied or not
+
+.. <legal notes>
+
+legal notes
+=================
+| SPDX-FileCopyrightText: © 2022 ekvip automation GmbH <info@ekvip.de>
+| SPDX-License-Identifier: Apache-2.0
+| For details check: Apache-2.0_
+
+.. _Apache-2.0: https://www.apache.org/licenses/LICENSE-2.0
+
+.. </legal notes>
+
+methods and properties
+======================
+
+*)
+
+FUNCTION_BLOCK UnitConversion_TestSuite EXTENDS TcUnit.FB_TestSuite
+VAR_INPUT
+END_VAR
+VAR_OUTPUT
+END_VAR
+VAR
+	(* not a number *)
+	NAN							:LREAL;
+	(* infinity *)
+	INF							:LREAL;
+	(* -infinity *)
+	MINUS_INF					:LREAL;
+	(* -0.0 (MSB is set only) *)
+	MINUS_ZERO					:LREAL;
+	(* minimum subnormal value: -2.225073858507201e-308 (all fraction bits and MSB set only) *)
+	MIN_SUBNORMAL				:LREAL;
+	(* maximum subnormal value: 2.225073858507201e-308 (all fraction bits are set only) *)
+	MAX_SUBNORMAL				:LREAL;
+	(* smallest positive subnormal value: 5E-324 (LSB set only) *)
+	SMALLEST_POSITIVE_SUBNORMAL	:LREAL;
+	(* smallest negative subnormal value: -5E-324 (LSB and MSB set only)*)
+	SMALLEST_NEGATIVE_SUBNORMAL	:LREAL;
+END_VAR
+
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[THIS^.runConvertLength();
+THIS^.runConvertArea();
+THIS^.runConvertVolume();
+THIS^.runConvertWeight();
+THIS^.runConvertTemprature();
+THIS^.runConvertDuration();
+THIS^.runConvertPressure();
+THIS^.runConvertVelocity();
+THIS^.runConvertAngle();
+THIS^.runCalculateVelocity();
+THIS^.runFastPow10();
+THIS^.runConvertAngularVelocity();
+]]></ST>
+    </Implementation>
+    <Folder Name="CalculateVelocity" Id="{b8b9f2b4-b7b2-4d41-b0fc-54ead726a5f1}" />
+    <Folder Name="ConvertAngle" Id="{a7b9f2b4-b7b2-4d41-b0fc-54ead726a5f2}" />
+    <Folder Name="ConvertAngularVelocity" Id="{dce22eb0-c90a-440a-83c0-71c25b28a7d1}" />
+    <Folder Name="ConvertArea" Id="{18cf6781-2250-4231-8d3e-379a06f5a309}" />
+    <Folder Name="ConvertDuration" Id="{d732b950-ba61-41cf-a085-9be460163853}" />
+    <Folder Name="ConvertLength" Id="{e3455e57-ac3a-4e19-977d-272679b4ae6f}" />
+    <Folder Name="ConvertPressure" Id="{61a15292-42f8-40cc-8100-e9325460461d}" />
+    <Folder Name="ConvertTemperature" Id="{06d0f32f-163f-45b3-9320-90c7c8096bd0}" />
+    <Folder Name="ConvertVelocity" Id="{a102c821-e304-4227-bd17-2f7010f899d0}" />
+    <Folder Name="ConvertVolume" Id="{5a6ab712-fe0e-48e8-b0aa-04f2cfd60bc3}" />
+    <Folder Name="ConvertWeight" Id="{b5b063dc-95f1-43f3-b2af-e57a4329ea66}" />
+    <Folder Name="FastPow10" Id="{852e8885-cd26-4c6a-9413-26f03905646e}" />
+    <Method Name="FB_init" Id="{add6e4a6-3fda-4e60-a565-b124842fa739}">
+      <Declaration><![CDATA[METHOD FB_init : BOOL
+VAR_INPUT
+	(* if TRUE, the retain variables are initialized (warm start / cold start)*)
+	bInitRetains	: BOOL;
+	(* if TRUE, the instance afterwards gets moved into the copy code (online change)*)
+	bInCopyCode	: BOOL;
+END_VAR
+VAR
+	binaryNumberPointer	:POINTER TO LWORD;	
+END_VAR
+VAR CONSTANT
+	(* binary value of -0.0 *) 
+	BINARY_MINUS_ZERO					:LWORD := 16#8000_0000_0000_0000;
+	(* binary value of inf *)
+	BINARY_INFINITY						:LWORD := 16#7FF0_0000_0000_0000;
+	(* binary value of -inf *)
+	BINARY_NEGATIVE_INFINITY			:LWORD := 16#FFF0_0000_0000_0000;
+	(* minimum denormalized number *)
+	BINARY_MIN_SUBNORMAL				:LWORD := 16#800F_FFFF_FFFF_FFFF;
+	(* maximum denormalized number*)
+	BINARY_MAX_SUBNORMAL				:LWORD := 16#000F_FFFF_FFFF_FFFF;
+	(* smallest positive denormalizied number greater than zero *)
+	BINARY_SMALLEST_POSITIVE_SUBNORMAL	:LWORD := 16#0000_0000_0000_0001;
+	(* smallest negative denormalizied number greater than minus zero *) 
+	BINARY_SMALLEST_NEGATIVE_SUBNORMAL	:LWORD := 16#8000_0000_0000_0001;
+	(* smallest positive signaling NaN *)
+	BINARY_POSITIVE_SIGNALING_NAN		:LWORD := 16#FFF0_0000_0000_0001;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[binaryNumberPointer := ADR(THIS^.NAN);
+binaryNumberPointer^ := BINARY_POSITIVE_SIGNALING_NAN;
+
+binaryNumberPointer := ADR(THIS^.INF);
+binaryNumberPointer^ := BINARY_INFINITY;
+
+binaryNumberPointer := ADR(THIS^.MINUS_INF);
+binaryNumberPointer^ := BINARY_NEGATIVE_INFINITY;
+
+binaryNumberPointer := ADR(THIS^.MINUS_ZERO);
+binaryNumberPointer^ := BINARY_MINUS_ZERO;
+
+binaryNumberPointer := ADR(THIS^.MIN_SUBNORMAL);
+binaryNumberPointer^ := BINARY_MIN_SUBNORMAL; 
+
+binaryNumberPointer := ADR(THIS^.MAX_SUBNORMAL);
+binaryNumberPointer^ := BINARY_MAX_SUBNORMAL; 
+
+binaryNumberPointer := ADR(THIS^.SMALLEST_POSITIVE_SUBNORMAL);
+binaryNumberPointer^ := BINARY_SMALLEST_POSITIVE_SUBNORMAL; 
+
+binaryNumberPointer := ADR(THIS^.SMALLEST_NEGATIVE_SUBNORMAL);
+binaryNumberPointer^ := BINARY_SMALLEST_NEGATIVE_SUBNORMAL; 
+]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="runCalculateVelocity" Id="{b641000e-435b-4654-b847-331f9a93b1ff}" FolderPath="CalculateVelocity\">
+      <Declaration><![CDATA[(*
+
+short summary
+==================
+This test method tests ``CalculateVelocity``
+method of CNM_RecipeHandling library with various inputs
+
+.. <legal notes>
+
+legal notes
+=================
+| SPDX-FileCopyrightText: © 2025 ekvip automation GmbH <info@ekvip.de>
+| SPDX-License-Identifier: Apache-2.0
+| For details check: Apache-2.0_
+
+.. _Apache-2.0: https://www.apache.org/licenses/LICENSE-2.0
+
+.. </legal notes>
+
+*)
+METHOD runCalculateVelocity
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[RETURN(NOT TcUnit.TEST_ORDERED('testCalculateVelocity'));
+THIS^.testCalculateVelocity(
+	distanceDeltaValue := 1.0,
+	timeDeltaValue := 1.0,
+	distanceUnit := CNM_RecipeHandling.LengthUnit.METER,
+	timeUnit:= CNM_RecipeHandling.DurationUnit.SECONDS,
+	distancePrefix := CNM_RecipeHandling.MetricPrefixes.NONE,
+	timePrefix := CNM_RecipeHandling.MetricPrefixes.NONE,
+	expectedVelocityValue :=  1.0,
+	expectedDistanceUnit := CNM_RecipeHandling.LengthUnit.METER,
+	expectedDistancePrefix := CNM_RecipeHandling.MetricPrefixes.NONE,
+	expectedDurationUnit := CNM_RecipeHandling.DurationUnit.SECONDS,
+	expectedDurationPrefix := CNM_RecipeHandling.MetricPrefixes.NONE
+);
+THIS^.testCalculateVelocity(
+	distanceDeltaValue :=10.0,
+	distancePrefix := CNM_RecipeHandling.MetricPrefixes.NONE,
+	distanceUnit := CNM_RecipeHandling.LengthUnit.METER,
+	timeDeltaValue := 2.0,
+	timePrefix := CNM_RecipeHandling.MetricPrefixes.NONE,
+	timeUnit:= CNM_RecipeHandling.DurationUnit.SECONDS,
+	expectedVelocityValue := 5.0,
+	expectedDistanceUnit := CNM_RecipeHandling.LengthUnit.METER,
+	expectedDistancePrefix := CNM_RecipeHandling.MetricPrefixes.NONE,
+	expectedDurationUnit := CNM_RecipeHandling.DurationUnit.SECONDS,
+	expectedDurationPrefix := CNM_RecipeHandling.MetricPrefixes.NONE
+);
+THIS^.testCalculateVelocity(
+	distanceDeltaValue :=1.0,
+	distancePrefix := CNM_RecipeHandling.MetricPrefixes.kilo,
+	distanceUnit := CNM_RecipeHandling.LengthUnit.METER,
+	timeDeltaValue := 1.0,
+	timePrefix := CNM_RecipeHandling.MetricPrefixes.NONE,
+	timeUnit:= CNM_RecipeHandling.DurationUnit.HOUR,
+	expectedVelocityValue := 0.277,
+	expectedDistanceUnit := CNM_RecipeHandling.LengthUnit.METER,
+	expectedDistancePrefix := CNM_RecipeHandling.MetricPrefixes.NONE,
+	expectedDurationUnit := CNM_RecipeHandling.DurationUnit.SECONDS,
+	expectedDurationPrefix := CNM_RecipeHandling.MetricPrefixes.NONE
+);
+THIS^.testCalculateVelocity(
+	distanceDeltaValue :=1000.0,
+	distancePrefix := CNM_RecipeHandling.MetricPrefixes.MILLI,
+	distanceUnit := CNM_RecipeHandling.LengthUnit.METER,
+	timeDeltaValue := 1.0,
+	timePrefix := CNM_RecipeHandling.MetricPrefixes.NONE,
+	timeUnit:= CNM_RecipeHandling.DurationUnit.SECONDS,
+	expectedVelocityValue := 1.0,
+	expectedDistanceUnit := CNM_RecipeHandling.LengthUnit.METER,
+	expectedDistancePrefix := CNM_RecipeHandling.MetricPrefixes.NONE,
+	expectedDurationUnit := CNM_RecipeHandling.DurationUnit.SECONDS,
+	expectedDurationPrefix := CNM_RecipeHandling.MetricPrefixes.NONE
+);
+THIS^.testCalculateVelocity(
+	distanceDeltaValue :=1.0,
+	distancePrefix := CNM_RecipeHandling.MetricPrefixes.NONE,
+	distanceUnit := CNM_RecipeHandling.LengthUnit.METER,
+	timeDeltaValue := 1000.0,
+	timePrefix := CNM_RecipeHandling.MetricPrefixes.MILLI,
+	timeUnit:= CNM_RecipeHandling.DurationUnit.SECONDS,
+	expectedVelocityValue :=1.0,
+	expectedDistanceUnit := CNM_RecipeHandling.LengthUnit.METER,
+	expectedDistancePrefix := CNM_RecipeHandling.MetricPrefixes.NONE,
+	expectedDurationUnit := CNM_RecipeHandling.DurationUnit.SECONDS,
+	expectedDurationPrefix := CNM_RecipeHandling.MetricPrefixes.NONE
+);
+THIS^.testCalculateVelocity(
+	distanceDeltaValue :=100.0,
+	distancePrefix := CNM_RecipeHandling.MetricPrefixes.CENTI,
+	distanceUnit := CNM_RecipeHandling.LengthUnit.METER,
+	timeDeltaValue := 1.0,
+	timePrefix := CNM_RecipeHandling.MetricPrefixes.NONE,
+	timeUnit:= CNM_RecipeHandling.DurationUnit.SECONDS,
+	expectedVelocityValue :=1.0,
+	expectedDistanceUnit := CNM_RecipeHandling.LengthUnit.METER,
+	expectedDistancePrefix := CNM_RecipeHandling.MetricPrefixes.NONE,
+	expectedDurationUnit := CNM_RecipeHandling.DurationUnit.SECONDS,
+	expectedDurationPrefix := CNM_RecipeHandling.MetricPrefixes.NONE
+);
+THIS^.testCalculateVelocity(
+	distanceDeltaValue :=10.0,
+	distancePrefix := CNM_RecipeHandling.MetricPrefixes.KILO,
+	distanceUnit := CNM_RecipeHandling.LengthUnit.METER,
+	timeDeltaValue := 10.0,
+	timePrefix := CNM_RecipeHandling.MetricPrefixes.NONE,
+	timeUnit:= CNM_RecipeHandling.DurationUnit.SECONDS,
+	expectedVelocityValue :=1000.0,
+	expectedDistanceUnit := CNM_RecipeHandling.LengthUnit.METER,
+	expectedDistancePrefix := CNM_RecipeHandling.MetricPrefixes.NONE,
+	expectedDurationUnit := CNM_RecipeHandling.DurationUnit.SECONDS,
+	expectedDurationPrefix := CNM_RecipeHandling.MetricPrefixes.NONE
+);
+THIS^.testCalculateVelocity(
+	distanceDeltaValue :=1.0,
+	distancePrefix := CNM_RecipeHandling.MetricPrefixes.NONE,
+	distanceUnit := CNM_RecipeHandling.LengthUnit.METER,
+	timeDeltaValue := 1.0,
+	timePrefix := CNM_RecipeHandling.MetricPrefixes.NONE,
+	timeUnit:= CNM_RecipeHandling.DurationUnit.HOUR,
+	expectedVelocityValue := 0.000277,
+	expectedDistanceUnit := CNM_RecipeHandling.LengthUnit.METER,
+	expectedDistancePrefix := CNM_RecipeHandling.MetricPrefixes.NONE,
+	expectedDurationUnit := CNM_RecipeHandling.DurationUnit.SECONDS,
+	expectedDurationPrefix := CNM_RecipeHandling.MetricPrefixes.NONE
+);
+THIS^.testCalculateVelocity(
+	distanceDeltaValue :=1.0,
+	distancePrefix := CNM_RecipeHandling.MetricPrefixes.NANO,
+	distanceUnit := CNM_RecipeHandling.LengthUnit.METER,
+	timeDeltaValue := 1.0,
+	timePrefix := CNM_RecipeHandling.MetricPrefixes.NONE,
+	timeUnit:= CNM_RecipeHandling.DurationUnit.SECONDS,
+	expectedVelocityValue := 0.000000001,
+	expectedDistanceUnit := CNM_RecipeHandling.LengthUnit.METER,
+	expectedDistancePrefix := CNM_RecipeHandling.MetricPrefixes.NONE,
+	expectedDurationUnit := CNM_RecipeHandling.DurationUnit.SECONDS,
+	expectedDurationPrefix := CNM_RecipeHandling.MetricPrefixes.NONE
+);
+THIS^.testCalculateVelocity(
+	distanceDeltaValue :=1.0,
+	distancePrefix := CNM_RecipeHandling.MetricPrefixes.YOTTA,
+	distanceUnit := CNM_RecipeHandling.LengthUnit.METER,
+	timeDeltaValue := 1.0,
+	timePrefix := CNM_RecipeHandling.MetricPrefixes.NONE,
+	timeUnit:= CNM_RecipeHandling.DurationUnit.SECONDS,
+	expectedVelocityValue := 1000000000000000000000000.0,
+	expectedDistanceUnit := CNM_RecipeHandling.LengthUnit.METER,
+	expectedDistancePrefix := CNM_RecipeHandling.MetricPrefixes.NONE,
+	expectedDurationUnit := CNM_RecipeHandling.DurationUnit.SECONDS,
+	expectedDurationPrefix := CNM_RecipeHandling.MetricPrefixes.NONE
+);
+THIS^.testCalculateVelocity(
+	distanceDeltaValue :=1.0,
+	distancePrefix := CNM_RecipeHandling.MetricPrefixes.YOTTA,
+	distanceUnit := CNM_RecipeHandling.LengthUnit.METER,
+	timeDeltaValue := -1.0,
+	timePrefix := CNM_RecipeHandling.MetricPrefixes.NONE,
+	timeUnit:= CNM_RecipeHandling.DurationUnit.SECONDS,
+	expectedVelocityValue := -1000000000000000000000000.0,
+	expectedDistanceUnit := CNM_RecipeHandling.LengthUnit.METER,
+	expectedDistancePrefix := CNM_RecipeHandling.MetricPrefixes.NONE,
+	expectedDurationUnit := CNM_RecipeHandling.DurationUnit.SECONDS,
+	expectedDurationPrefix := CNM_RecipeHandling.MetricPrefixes.NONE
+);
+THIS^.testCalculateVelocity(
+	distanceDeltaValue :=-1.0,
+	distancePrefix := CNM_RecipeHandling.MetricPrefixes.YOTTA,
+	distanceUnit := CNM_RecipeHandling.LengthUnit.METER,
+	
+	timeDeltaValue := -1.0,
+	timePrefix := CNM_RecipeHandling.MetricPrefixes.NONE,
+	timeUnit:= CNM_RecipeHandling.DurationUnit.SECONDS,
+	expectedVelocityValue := 1000000000000000000000000.0,
+	expectedDistanceUnit := CNM_RecipeHandling.LengthUnit.METER,
+	expectedDistancePrefix := CNM_RecipeHandling.MetricPrefixes.NONE,
+
+	expectedDurationUnit := CNM_RecipeHandling.DurationUnit.SECONDS,
+	expectedDurationPrefix := CNM_RecipeHandling.MetricPrefixes.NONE
+);
+THIS^.testCalculateVelocity(
+	distanceDeltaValue :=-1.0,
+	distancePrefix := CNM_RecipeHandling.MetricPrefixes.YOTTA,
+	distanceUnit := CNM_RecipeHandling.LengthUnit.METER,
+	timeDeltaValue := 1.0,
+	timePrefix := CNM_RecipeHandling.MetricPrefixes.NONE,
+	timeUnit:= CNM_RecipeHandling.DurationUnit.SECONDS,
+	expectedVelocityValue := -1000000000000000000000000.0,
+	expectedDistanceUnit := CNM_RecipeHandling.LengthUnit.METER,
+	expectedDistancePrefix := CNM_RecipeHandling.MetricPrefixes.NONE,
+	expectedDurationUnit := CNM_RecipeHandling.DurationUnit.SECONDS,
+	expectedDurationPrefix := CNM_RecipeHandling.MetricPrefixes.NONE
+);
+THIS^.testCalculateVelocity(
+	distanceDeltaValue :=0.0,
+	distancePrefix := CNM_RecipeHandling.MetricPrefixes.MILLI,
+	distanceUnit := CNM_RecipeHandling.LengthUnit.METER,
+	timeDeltaValue := 1.0,
+	timePrefix := CNM_RecipeHandling.MetricPrefixes.NONE,
+	timeUnit:= CNM_RecipeHandling.DurationUnit.SECONDS,
+	expectedVelocityValue := 0.0,
+	expectedDistanceUnit := CNM_RecipeHandling.LengthUnit.METER,
+	expectedDistancePrefix := CNM_RecipeHandling.MetricPrefixes.NONE,
+	expectedDurationUnit := CNM_RecipeHandling.DurationUnit.SECONDS,
+	expectedDurationPrefix := CNM_RecipeHandling.MetricPrefixes.NONE
+);
+THIS^.testCalculateVelocity(
+	distanceDeltaValue :=0.0,
+	distancePrefix := CNM_RecipeHandling.MetricPrefixes.MICRO,
+	distanceUnit := CNM_RecipeHandling.LengthUnit.METER,
+	timeDeltaValue := 0.0,
+	timePrefix := CNM_RecipeHandling.MetricPrefixes.NONE,
+	timeUnit:= CNM_RecipeHandling.DurationUnit.SECONDS,
+	expectedVelocityValue := 0.0,
+	expectedDistanceUnit := CNM_RecipeHandling.LengthUnit.METER,
+	expectedDistancePrefix := CNM_RecipeHandling.MetricPrefixes.NONE,
+	expectedDurationUnit := CNM_RecipeHandling.DurationUnit.SECONDS,
+	expectedDurationPrefix := CNM_RecipeHandling.MetricPrefixes.NONE
+);
+THIS^.testCalculateVelocity(
+	distanceDeltaValue :=1.0,
+	distancePrefix := CNM_RecipeHandling.MetricPrefixes.MILLI,
+	distanceUnit := CNM_RecipeHandling.LengthUnit.METER,
+	timeDeltaValue := 1.0,
+	timePrefix := CNM_RecipeHandling.MetricPrefixes.NANO,
+	timeUnit:= CNM_RecipeHandling.DurationUnit.SECONDS,
+	expectedVelocityValue := 1000000.0,
+	expectedDistanceUnit := CNM_RecipeHandling.LengthUnit.METER,
+	expectedDistancePrefix := CNM_RecipeHandling.MetricPrefixes.NONE,
+	expectedDurationUnit := CNM_RecipeHandling.DurationUnit.SECONDS,
+	expectedDurationPrefix := CNM_RecipeHandling.MetricPrefixes.NONE
+);
+THIS^.testCalculateVelocity(
+	distanceDeltaValue :=1.0,
+	distancePrefix := CNM_RecipeHandling.MetricPrefixes.MILLI,
+	distanceUnit := CNM_RecipeHandling.LengthUnit.METER,
+	timeDeltaValue := 1.0,
+	timePrefix := CNM_RecipeHandling.MetricPrefixes.NANO,
+	timeUnit:= CNM_RecipeHandling.DurationUnit.SECONDS,
+	expectedVelocityValue := 1000000.0,
+	expectedDistanceUnit := CNM_RecipeHandling.LengthUnit.METER,
+	expectedDistancePrefix := CNM_RecipeHandling.MetricPrefixes.NONE,
+	expectedDurationUnit := CNM_RecipeHandling.DurationUnit.SECONDS,
+	expectedDurationPrefix := CNM_RecipeHandling.MetricPrefixes.NONE
+);
+THIS^.testCalculateVelocity(
+	distanceDeltaValue :=1000.0,
+	distancePrefix := CNM_RecipeHandling.MetricPrefixes.NONE,
+	distanceUnit := CNM_RecipeHandling.LengthUnit.METER,
+	timeDeltaValue := 2.0,
+	timePrefix := CNM_RecipeHandling.MetricPrefixes.NONE,
+	timeUnit:= CNM_RecipeHandling.DurationUnit.MINUTE,
+	expectedVelocityValue := 8.333,
+	expectedDistanceUnit := CNM_RecipeHandling.LengthUnit.METER,
+	expectedDistancePrefix := CNM_RecipeHandling.MetricPrefixes.NONE,
+	expectedDurationUnit := CNM_RecipeHandling.DurationUnit.SECONDS,
+	expectedDurationPrefix := CNM_RecipeHandling.MetricPrefixes.NONE
+);
+THIS^.testCalculateVelocity(
+	distanceDeltaValue := 500.0,
+	distancePrefix := CNM_RecipeHandling.MetricPrefixes.MILLI,
+	distanceUnit := CNM_RecipeHandling.LengthUnit.METER,
+	timeDeltaValue := 0.5,
+	timePrefix := CNM_RecipeHandling.MetricPrefixes.NONE,
+	timeUnit:= CNM_RecipeHandling.DurationUnit.SECONDS,
+	expectedVelocityValue := 1.0,
+	expectedDistanceUnit := CNM_RecipeHandling.LengthUnit.METER,
+	expectedDistancePrefix := CNM_RecipeHandling.MetricPrefixes.NONE,
+	expectedDurationUnit := CNM_RecipeHandling.DurationUnit.SECONDS,
+	expectedDurationPrefix := CNM_RecipeHandling.MetricPrefixes.NONE
+);
+THIS^.testCalculateVelocity(
+	distanceDeltaValue := 0.01,
+	distancePrefix := CNM_RecipeHandling.MetricPrefixes.MILLI,
+	distanceUnit := CNM_RecipeHandling.LengthUnit.METER,
+	timeDeltaValue := 86400.0,
+	timePrefix := CNM_RecipeHandling.MetricPrefixes.NONE,
+	timeUnit:= CNM_RecipeHandling.DurationUnit.SECONDS,
+	expectedVelocityValue := 0.0000001157,
+	expectedDistanceUnit := CNM_RecipeHandling.LengthUnit.METER,
+	expectedDistancePrefix := CNM_RecipeHandling.MetricPrefixes.NONE,
+	expectedDurationUnit := CNM_RecipeHandling.DurationUnit.SECONDS,
+	expectedDurationPrefix := CNM_RecipeHandling.MetricPrefixes.NONE
+);
+THIS^.testCalculateVelocity(
+	distanceDeltaValue := 0.01,
+	distancePrefix := CNM_RecipeHandling.MetricPrefixes.KILO,
+	distanceUnit := CNM_RecipeHandling.LengthUnit.METER,
+	timeDeltaValue := 1.0,
+	timePrefix := CNM_RecipeHandling.MetricPrefixes.NONE,
+	timeUnit:= CNM_RecipeHandling.DurationUnit.MINUTE,
+	expectedVelocityValue := 0.1667,
+	expectedDistanceUnit := CNM_RecipeHandling.LengthUnit.METER,
+	expectedDistancePrefix := CNM_RecipeHandling.MetricPrefixes.NONE,
+	expectedDurationUnit := CNM_RecipeHandling.DurationUnit.SECONDS,
+	expectedDurationPrefix := CNM_RecipeHandling.MetricPrefixes.NONE
+);
+THIS^.testCalculateVelocity(
+	distanceDeltaValue := 3.0,
+	distancePrefix := CNM_RecipeHandling.MetricPrefixes.MEGA,
+	distanceUnit := CNM_RecipeHandling.LengthUnit.METER,
+	timeDeltaValue := 10.0,
+	timePrefix := CNM_RecipeHandling.MetricPrefixes.KILO,
+	timeUnit:= CNM_RecipeHandling.DurationUnit.SECONDS,
+	expectedVelocityValue := 300.0,
+	expectedDistanceUnit := CNM_RecipeHandling.LengthUnit.METER,
+	expectedDistancePrefix := CNM_RecipeHandling.MetricPrefixes.NONE,
+	expectedDurationUnit := CNM_RecipeHandling.DurationUnit.SECONDS,
+	expectedDurationPrefix := CNM_RecipeHandling.MetricPrefixes.NONE
+);
+THIS^.testCalculateVelocity(
+	distanceDeltaValue := -3.0,
+	distancePrefix := CNM_RecipeHandling.MetricPrefixes.MEGA,
+	distanceUnit := CNM_RecipeHandling.LengthUnit.METER,
+	timeDeltaValue := -10.0,
+	timePrefix := CNM_RecipeHandling.MetricPrefixes.KILO,
+	timeUnit:= CNM_RecipeHandling.DurationUnit.SECONDS,
+	expectedVelocityValue := 300.0,
+	expectedDistanceUnit := CNM_RecipeHandling.LengthUnit.METER,
+	expectedDistancePrefix := CNM_RecipeHandling.MetricPrefixes.NONE,
+	expectedDurationUnit := CNM_RecipeHandling.DurationUnit.SECONDS,
+	expectedDurationPrefix := CNM_RecipeHandling.MetricPrefixes.NONE
+);
+THIS^.testCalculateVelocity(
+	distanceDeltaValue := -3.0,
+	distancePrefix := CNM_RecipeHandling.MetricPrefixes.MEGA,
+	distanceUnit := CNM_RecipeHandling.LengthUnit.METER,
+	timeDeltaValue := 10.0,
+	timePrefix := CNM_RecipeHandling.MetricPrefixes.KILO,
+	timeUnit:= CNM_RecipeHandling.DurationUnit.SECONDS,
+	expectedVelocityValue := -300.0,
+	expectedDistanceUnit := CNM_RecipeHandling.LengthUnit.METER,
+	expectedDistancePrefix := CNM_RecipeHandling.MetricPrefixes.NONE,
+	expectedDurationUnit := CNM_RecipeHandling.DurationUnit.SECONDS,
+	expectedDurationPrefix := CNM_RecipeHandling.MetricPrefixes.NONE
+);
+THIS^.testCalculateVelocity(
+	distanceDeltaValue := 500.0,
+	distancePrefix := CNM_RecipeHandling.MetricPrefixes.MILLI,
+	distanceUnit := CNM_RecipeHandling.LengthUnit.METER,
+	timeDeltaValue := -0.5,
+	timePrefix := CNM_RecipeHandling.MetricPrefixes.NONE,
+	timeUnit:= CNM_RecipeHandling.DurationUnit.SECONDS,
+	expectedVelocityValue := -1.0,
+	expectedDistanceUnit := CNM_RecipeHandling.LengthUnit.METER,
+	expectedDistancePrefix := CNM_RecipeHandling.MetricPrefixes.NONE,
+	expectedDurationUnit := CNM_RecipeHandling.DurationUnit.SECONDS,
+	expectedDurationPrefix := CNM_RecipeHandling.MetricPrefixes.NONE
+);
+THIS^.testCalculateVelocity(
+	distanceDeltaValue := 500.0,
+	distancePrefix := CNM_RecipeHandling.MetricPrefixes.MILLI,
+	distanceUnit := CNM_RecipeHandling.LengthUnit.METER,
+	timeDeltaValue := 0.0,
+	timePrefix := CNM_RecipeHandling.MetricPrefixes.NONE,
+	timeUnit:= CNM_RecipeHandling.DurationUnit.SECONDS,
+	expectedVelocityValue := 0.0,
+	expectedDistanceUnit := CNM_RecipeHandling.LengthUnit.METER,
+	expectedDistancePrefix := CNM_RecipeHandling.MetricPrefixes.NONE,
+	expectedDurationUnit := CNM_RecipeHandling.DurationUnit.SECONDS,
+	expectedDurationPrefix := CNM_RecipeHandling.MetricPrefixes.NONE
+);
+THIS^.testCalculateVelocity(
+	distanceDeltaValue := 500.0,
+	distancePrefix := CNM_RecipeHandling.MetricPrefixes.MILLI,
+	distanceUnit := CNM_RecipeHandling.LengthUnit.METER,
+	timeDeltaValue := -0.0,
+	timePrefix := CNM_RecipeHandling.MetricPrefixes.NONE,
+	timeUnit:= CNM_RecipeHandling.DurationUnit.SECONDS,
+	expectedVelocityValue := -0.0,
+	expectedDistanceUnit := CNM_RecipeHandling.LengthUnit.METER,
+	expectedDistancePrefix := CNM_RecipeHandling.MetricPrefixes.NONE,
+	expectedDurationUnit := CNM_RecipeHandling.DurationUnit.SECONDS,
+	expectedDurationPrefix := CNM_RecipeHandling.MetricPrefixes.NONE
+);
+THIS^.testCalculateVelocity(
+	distanceDeltaValue := -500.0,
+	distancePrefix := CNM_RecipeHandling.MetricPrefixes.MILLI,
+	distanceUnit := CNM_RecipeHandling.LengthUnit.METER,
+	timeDeltaValue := 0.0,
+	timePrefix := CNM_RecipeHandling.MetricPrefixes.NONE,
+	timeUnit:= CNM_RecipeHandling.DurationUnit.SECONDS,	
+	expectedVelocityValue := -0.0,
+	expectedDistanceUnit := CNM_RecipeHandling.LengthUnit.METER,
+	expectedDistancePrefix := CNM_RecipeHandling.MetricPrefixes.NONE,
+	expectedDurationUnit := CNM_RecipeHandling.DurationUnit.SECONDS,
+	expectedDurationPrefix := CNM_RecipeHandling.MetricPrefixes.NONE
+);
+THIS^.testCalculateVelocity(
+	distanceDeltaValue := -0.01,
+	distancePrefix := CNM_RecipeHandling.MetricPrefixes.MILLI,
+	distanceUnit := CNM_RecipeHandling.LengthUnit.METER,
+	timeDeltaValue := 86400.0,
+	timePrefix := CNM_RecipeHandling.MetricPrefixes.NONE,
+	timeUnit:= CNM_RecipeHandling.DurationUnit.SECONDS,	
+	expectedVelocityValue := -0.0000001157,
+	expectedDistanceUnit := CNM_RecipeHandling.LengthUnit.METER,
+	expectedDistancePrefix := CNM_RecipeHandling.MetricPrefixes.NONE,
+	expectedDurationUnit := CNM_RecipeHandling.DurationUnit.SECONDS,
+	expectedDurationPrefix := CNM_RecipeHandling.MetricPrefixes.NONE
+);
+THIS^.testCalculateVelocitySpecialCases(
+	distanceDeltaValue :=  1.0,
+	distancePrefix := CNM_RecipeHandling.MetricPrefixes.MILLI,
+	distanceUnit := CNM_RecipeHandling.LengthUnit.METER,
+	
+	timeDeltaValue := THIS^.INF,
+	timePrefix := CNM_RecipeHandling.MetricPrefixes.NONE,
+	timeUnit:= CNM_RecipeHandling.DurationUnit.SECONDS,
+	
+	
+	expectedVelocityValue := 0.0,
+
+	expectedDistanceUnit := CNM_RecipeHandling.LengthUnit.METER,
+	expectedDistancePrefix := CNM_RecipeHandling.MetricPrefixes.NONE,
+
+	expectedDurationUnit := CNM_RecipeHandling.DurationUnit.SECONDS,
+	expectedDurationPrefix := CNM_RecipeHandling.MetricPrefixes.NONE
+);
+(*THIS^.testCalculateVelocitySpecialCases(
+	distanceDeltaValue :=  THIS^.INF,
+	distancePrefix := CNM_RecipeHandling.MetricPrefixes.MILLI,
+	distanceUnit := CNM_RecipeHandling.LengthUnit.METER,
+	
+	timeDeltaValue := 1.0,
+	timePrefix := CNM_RecipeHandling.MetricPrefixes.NONE,
+	timeUnit:= CNM_RecipeHandling.DurationUnit.SECONDS,
+	
+	
+	expectedVelocityValue := 0.0,
+
+	expectedDistanceUnit := CNM_RecipeHandling.LengthUnit.METER,
+	expectedDistancePrefix := CNM_RecipeHandling.MetricPrefixes.NONE,
+
+	expectedDurationUnit := CNM_RecipeHandling.DurationUnit.SECONDS,
+	expectedDurationPrefix := CNM_RecipeHandling.MetricPrefixes.NONE
+);*)
+(*THIS^.testCalculateVelocitySpecialCases(
+	distanceDeltaValue := THIS^.NAN,
+	distancePrefix := CNM_RecipeHandling.MetricPrefixes.MILLI,
+	distanceUnit := CNM_RecipeHandling.LengthUnit.METER,
+	
+	timeDeltaValue := THIS^.NAN,
+	timePrefix := CNM_RecipeHandling.MetricPrefixes.NONE,
+	timeUnit:= CNM_RecipeHandling.DurationUnit.SECONDS,
+	
+	
+	expectedVelocityValue := THIS^.NAN,
+
+	expectedDistanceUnit := CNM_RecipeHandling.LengthUnit.METER,
+	expectedDistancePrefix := CNM_RecipeHandling.MetricPrefixes.NONE,
+
+	expectedDurationUnit := CNM_RecipeHandling.DurationUnit.SECONDS,
+	expectedDurationPrefix := CNM_RecipeHandling.MetricPrefixes.NONE
+);*)
+TcUnit.TEST_FINISHED();	]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="runConvertAngle" Id="{c1b9f2b4-b7b2-4d41-b0fc-54ead726a5f3}" FolderPath="ConvertAngle\">
+      <Declaration><![CDATA[(*
+short summary
+==================
+This test method tests ``ConvertAngle`` function of CNM_RecipeHandling library with various inputs
+including all unit conversions and edge cases.
+
+.. <legal notes>
+legal notes
+=================
+| SPDX-FileCopyrightText: © 2025 ekvip automation GmbH <info@ekvip.de>
+| SPDX-License-Identifier: Apache-2.0
+| For details check: Apache-2.0_
+.. _Apache-2.0: https://www.apache.org/licenses/LICENSE-2.0
+.. </legal notes>
+*)
+METHOD runConvertAngle
+VAR_INPUT
+END_VAR
+VAR
+	pi : LREAL := 3.14159265358979323846264338327950288;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[RETURN(NOT TcUnit.TEST_ORDERED('testConvertAngle'));
+
+// Test radians to all other units
+THIS^.testConvertAngle(
+	sourceValue := pi,
+	sourceUnit := CNM_RecipeHandling.AngleUnit.RADIANS,
+	expectedValue := 180.0,
+	expectedUnit := CNM_RecipeHandling.AngleUnit.DEGREES
+);
+THIS^.testConvertAngle(
+	sourceValue := pi,
+	sourceUnit := CNM_RecipeHandling.AngleUnit.RADIANS,
+	expectedValue := 10800.0,
+	expectedUnit := CNM_RecipeHandling.AngleUnit.ARC_MINUTES
+);
+THIS^.testConvertAngle(
+	sourceValue := pi,
+	sourceUnit := CNM_RecipeHandling.AngleUnit.RADIANS,
+	expectedValue := 648000.0,
+	expectedUnit := CNM_RecipeHandling.AngleUnit.ARC_SECONDS
+);
+THIS^.testConvertAngle(
+	sourceValue := pi,
+	sourceUnit := CNM_RecipeHandling.AngleUnit.RADIANS,
+	expectedValue := 200.0,
+	expectedUnit := CNM_RecipeHandling.AngleUnit.GRADIANS
+);
+THIS^.testConvertAngle(
+	sourceValue := pi,
+	sourceUnit := CNM_RecipeHandling.AngleUnit.RADIANS,
+	expectedValue := 0.5,
+	expectedUnit := CNM_RecipeHandling.AngleUnit.TURNS
+);
+
+// Test degrees to all other units
+THIS^.testConvertAngle(
+	sourceValue := 180.0,
+	sourceUnit := CNM_RecipeHandling.AngleUnit.DEGREES,
+	expectedValue := pi,
+	expectedUnit := CNM_RecipeHandling.AngleUnit.RADIANS
+);
+THIS^.testConvertAngle(
+	sourceValue := 1.0,
+	sourceUnit := CNM_RecipeHandling.AngleUnit.DEGREES,
+	expectedValue := 60.0,
+	expectedUnit := CNM_RecipeHandling.AngleUnit.ARC_MINUTES
+);
+THIS^.testConvertAngle(
+	sourceValue := 1.0,
+	sourceUnit := CNM_RecipeHandling.AngleUnit.DEGREES,
+	expectedValue := 3600.0,
+	expectedUnit := CNM_RecipeHandling.AngleUnit.ARC_SECONDS
+);
+THIS^.testConvertAngle(
+	sourceValue := 90.0,
+	sourceUnit := CNM_RecipeHandling.AngleUnit.DEGREES,
+	expectedValue := 100.0,
+	expectedUnit := CNM_RecipeHandling.AngleUnit.GRADIANS
+);
+THIS^.testConvertAngle(
+	sourceValue := 360.0,
+	sourceUnit := CNM_RecipeHandling.AngleUnit.DEGREES,
+	expectedValue := 1.0,
+	expectedUnit := CNM_RecipeHandling.AngleUnit.TURNS
+);
+
+// Test arc minutes to other units
+THIS^.testConvertAngle(
+	sourceValue := 60.0,
+	sourceUnit := CNM_RecipeHandling.AngleUnit.ARC_MINUTES,
+	expectedValue := 1.0,
+	expectedUnit := CNM_RecipeHandling.AngleUnit.DEGREES
+);
+THIS^.testConvertAngle(
+	sourceValue := 1.0,
+	sourceUnit := CNM_RecipeHandling.AngleUnit.ARC_MINUTES,
+	expectedValue := 60.0,
+	expectedUnit := CNM_RecipeHandling.AngleUnit.ARC_SECONDS
+);
+
+// Test arc seconds to other units
+THIS^.testConvertAngle(
+	sourceValue := 3600.0,
+	sourceUnit := CNM_RecipeHandling.AngleUnit.ARC_SECONDS,
+	expectedValue := 1.0,
+	expectedUnit := CNM_RecipeHandling.AngleUnit.DEGREES
+);
+THIS^.testConvertAngle(
+	sourceValue := 60.0,
+	sourceUnit := CNM_RecipeHandling.AngleUnit.ARC_SECONDS,
+	expectedValue := 1.0,
+	expectedUnit := CNM_RecipeHandling.AngleUnit.ARC_MINUTES
+);
+
+// Test gradians to other units
+THIS^.testConvertAngle(
+	sourceValue := 100.0,
+	sourceUnit := CNM_RecipeHandling.AngleUnit.GRADIANS,
+	expectedValue := 90.0,
+	expectedUnit := CNM_RecipeHandling.AngleUnit.DEGREES
+);
+THIS^.testConvertAngle(
+	sourceValue := 400.0,
+	sourceUnit := CNM_RecipeHandling.AngleUnit.GRADIANS,
+	expectedValue := 1.0,
+	expectedUnit := CNM_RecipeHandling.AngleUnit.TURNS
+);
+
+// Test turns to other units
+THIS^.testConvertAngle(
+	sourceValue := 1.0,
+	sourceUnit := CNM_RecipeHandling.AngleUnit.TURNS,
+	expectedValue := 2.0 * pi,
+	expectedUnit := CNM_RecipeHandling.AngleUnit.RADIANS
+);
+THIS^.testConvertAngle(
+	sourceValue := 0.25,
+	sourceUnit := CNM_RecipeHandling.AngleUnit.TURNS,
+	expectedValue := 90.0,
+	expectedUnit := CNM_RecipeHandling.AngleUnit.DEGREES
+);
+
+// Test edge cases - zero angle
+THIS^.testConvertAngle(
+	sourceValue := 0.0,
+	sourceUnit := CNM_RecipeHandling.AngleUnit.DEGREES,
+	expectedValue := 0.0,
+	expectedUnit := CNM_RecipeHandling.AngleUnit.RADIANS
+);
+
+// Test edge cases - negative angles
+THIS^.testConvertAngle(
+	sourceValue := -90.0,
+	sourceUnit := CNM_RecipeHandling.AngleUnit.DEGREES,
+	expectedValue := -pi / 2.0,
+	expectedUnit := CNM_RecipeHandling.AngleUnit.RADIANS
+);
+THIS^.testConvertAngle(
+	sourceValue := -180.0,
+	sourceUnit := CNM_RecipeHandling.AngleUnit.DEGREES,
+	expectedValue := -pi,
+	expectedUnit := CNM_RecipeHandling.AngleUnit.RADIANS
+);
+
+// Test edge cases - full rotation
+THIS^.testConvertAngle(
+	sourceValue := 360.0,
+	sourceUnit := CNM_RecipeHandling.AngleUnit.DEGREES,
+	expectedValue := 2.0 * pi,
+	expectedUnit := CNM_RecipeHandling.AngleUnit.RADIANS
+);
+
+// Test special cases with NaN and infinity
+THIS^.testConvertAngleSpecialCases(
+	sourceValue := THIS^.NAN,
+	sourceUnit := CNM_RecipeHandling.AngleUnit.DEGREES,
+	expectedValue := THIS^.NAN,
+	expectedUnit := CNM_RecipeHandling.AngleUnit.RADIANS
+);
+THIS^.testConvertAngleSpecialCases(
+	sourceValue := THIS^.INF,
+	sourceUnit := CNM_RecipeHandling.AngleUnit.DEGREES,
+	expectedValue := THIS^.INF,
+	expectedUnit := CNM_RecipeHandling.AngleUnit.RADIANS
+);
+THIS^.testConvertAngleSpecialCases(
+	sourceValue := THIS^.MINUS_INF,
+	sourceUnit := CNM_RecipeHandling.AngleUnit.DEGREES,
+	expectedValue := THIS^.MINUS_INF,
+	expectedUnit := CNM_RecipeHandling.AngleUnit.RADIANS
+);
+
+TcUnit.TEST_FINISHED();]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="runConvertAngularVelocity" Id="{47a64403-a80f-4ff6-aa1d-9b9f15dbf720}" FolderPath="ConvertAngularVelocity\">
+      <Declaration><![CDATA[(*
+
+short summary
+==================
+This test method tests ``ConvertVelocity``
+method of CNM_RecipeHandling library with various inputs
+
+.. <legal notes>
+
+legal notes
+=================
+| SPDX-FileCopyrightText: © 2025 ekvip automation GmbH <info@ekvip.de>
+| SPDX-License-Identifier: Apache-2.0
+| For details check: Apache-2.0_
+
+.. _Apache-2.0: https://www.apache.org/licenses/LICENSE-2.0
+
+.. </legal notes>
+
+*)
+
+METHOD runConvertAngularVelocity
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[RETURN(NOT TcUnit.TEST_ORDERED('testConvertAngularVelocity'));
+
+THIS^.testConvertAngularVelocity(
+	sourceVelocityValue := 1.0,
+	expectedVelocityValue := 1.0472,
+	sourceUnit := CNM_RecipeHandling.AngleUnit.DEGREES,
+	expectedAngleUnit := CNM_RecipeHandling.AngleUnit.RADIANS,
+	sourceDurationUnit := CNM_RecipeHandling.DurationUnit.SECONDS,
+	sourceDurationPrefix := CNM_RecipeHandling.MetricPrefixes.NONE,
+	expectedDurationUnit := CNM_RecipeHandling.DurationUnit.MINUTE,
+	expectedDurationPrefix := CNM_RecipeHandling.MetricPrefixes.NONE
+);
+
+THIS^.testConvertAngularVelocity(
+	sourceVelocityValue := 1.0,
+	expectedVelocityValue := 0.16666667125087017,
+	sourceUnit := CNM_RecipeHandling.AngleUnit.DEGREES,
+	expectedAngleUnit := CNM_RecipeHandling.AngleUnit.TURNS,
+	sourceDurationUnit := CNM_RecipeHandling.DurationUnit.SECONDS,
+	sourceDurationPrefix := CNM_RecipeHandling.MetricPrefixes.NONE,
+	expectedDurationUnit := CNM_RecipeHandling.DurationUnit.MINUTE,
+	expectedDurationPrefix := CNM_RecipeHandling.MetricPrefixes.NONE
+);
+
+THIS^.testConvertAngularVelocity(
+	sourceVelocityValue := 1.0,
+	expectedVelocityValue := 0.017453293,
+	sourceUnit := CNM_RecipeHandling.AngleUnit.DEGREES,
+	expectedAngleUnit := CNM_RecipeHandling.AngleUnit.RADIANS,
+	sourceDurationUnit := CNM_RecipeHandling.DurationUnit.SECONDS,
+	sourceDurationPrefix := CNM_RecipeHandling.MetricPrefixes.NONE,
+	expectedDurationUnit := CNM_RecipeHandling.DurationUnit.SECONDS,
+	expectedDurationPrefix := CNM_RecipeHandling.MetricPrefixes.NONE
+);
+
+THIS^.testConvertAngularVelocity(
+	sourceVelocityValue := 3.14,
+	expectedVelocityValue := 179.90874767622066,
+	sourceUnit := CNM_RecipeHandling.AngleUnit.RADIANS,
+	expectedAngleUnit := CNM_RecipeHandling.AngleUnit.DEGREES,
+	sourceDurationUnit := CNM_RecipeHandling.DurationUnit.HOUR,
+	sourceDurationPrefix := CNM_RecipeHandling.MetricPrefixes.NONE,
+	expectedDurationUnit := CNM_RecipeHandling.DurationUnit.HOUR,
+	expectedDurationPrefix := CNM_RecipeHandling.MetricPrefixes.NONE
+);
+
+THIS^.testConvertAngularVelocitySpecialCases(
+	sourceVelocityValue := THIS^.NAN,
+	expectedVelocityValue := THIS^.NAN,
+	sourceUnit := CNM_RecipeHandling.AngleUnit.DEGREES,
+	expectedAngleUnit := CNM_RecipeHandling.AngleUnit.RADIANS,
+	sourceDurationUnit := CNM_RecipeHandling.DurationUnit.SECONDS,
+	sourceDurationPrefix := CNM_RecipeHandling.MetricPrefixes.NONE,
+	expectedDurationUnit := CNM_RecipeHandling.DurationUnit.SECONDS,
+	expectedDurationPrefix := CNM_RecipeHandling.MetricPrefixes.NONE
+);
+
+THIS^.testConvertAngularVelocitySpecialCases(
+	sourceVelocityValue := THIS^.INF,
+	expectedVelocityValue := THIS^.INF,
+	sourceUnit := CNM_RecipeHandling.AngleUnit.RADIANS,
+	expectedAngleUnit := CNM_RecipeHandling.AngleUnit.RADIANS,
+	sourceDurationUnit := CNM_RecipeHandling.DurationUnit.SECONDS,
+	sourceDurationPrefix := CNM_RecipeHandling.MetricPrefixes.NONE,
+	expectedDurationUnit := CNM_RecipeHandling.DurationUnit.SECONDS,
+	expectedDurationPrefix := CNM_RecipeHandling.MetricPrefixes.NONE
+);
+
+TcUnit.TEST_FINISHED();]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="runConvertArea" Id="{b6e0b949-7f0f-4c8a-8381-ff97290ba22e}" FolderPath="ConvertArea\">
+      <Declaration><![CDATA[(*
+
+short summary
+==================
+This test method tests ``ConvertArea``
+method of CNM_RecipeHandling library with various inputs
+
+.. <legal notes>
+
+legal notes
+=================
+| SPDX-FileCopyrightText: © 2025 ekvip automation GmbH <info@ekvip.de>
+| SPDX-License-Identifier: Apache-2.0
+| For details check: Apache-2.0_
+
+.. _Apache-2.0: https://www.apache.org/licenses/LICENSE-2.0
+
+.. </legal notes>
+
+*)
+
+METHOD runConvertArea
+VAR_INPUT
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[RETURN(NOT TcUnit.TEST_ORDERED('testConvertArea'));
+
+//without prefix
+THIS^.testConvertArea(
+	sourceValue := 1.0,
+	sourceUnit := CNM_RecipeHandling.AreaUnit.SQUARE_METER,
+	sourcePrefix := CNM_RecipeHandling.MetricPrefixes.NONE,
+	expectedValue := 10.7639,
+	expectedUnit := CNM_RecipeHandling.AreaUnit.US_SQUARE_FOOT,
+	expectedPrefix:= CNM_RecipeHandling.MetricPrefixes.NONE
+);
+THIS^.testConvertArea(
+	sourceValue := 1.0,
+	sourceUnit := CNM_RecipeHandling.AreaUnit.SQUARE_METER,
+	sourcePrefix := CNM_RecipeHandling.MetricPrefixes.NONE,
+	expectedValue := 1.0,
+	expectedUnit := CNM_RecipeHandling.AreaUnit.SQUARE_METER,
+	expectedPrefix:= CNM_RecipeHandling.MetricPrefixes.NONE
+);
+//with prefix
+THIS^.testConvertArea(
+	sourceValue := 10000.0,
+	sourceUnit := CNM_RecipeHandling.AreaUnit.SQUARE_METER,
+	sourcePrefix := CNM_RecipeHandling.MetricPrefixes.CENTI,
+	expectedValue := 1000000.0,
+	expectedUnit := CNM_RecipeHandling.AreaUnit.SQUARE_METER,
+	expectedPrefix:= CNM_RecipeHandling.MetricPrefixes.MILLI
+);
+THIS^.testConvertArea(
+	sourceValue := 1.0,
+	sourceUnit := CNM_RecipeHandling.AreaUnit.SQUARE_METER,
+	sourcePrefix := CNM_RecipeHandling.MetricPrefixes.NONE,
+	expectedValue := 1000000.0,
+	expectedUnit := CNM_RecipeHandling.AreaUnit.SQUARE_METER,
+	expectedPrefix:= CNM_RecipeHandling.MetricPrefixes.MILLI
+);
+THIS^.testConvertArea(
+	sourceValue := 1.0,
+	sourceUnit := CNM_RecipeHandling.AreaUnit.SQUARE_METER,
+	sourcePrefix := CNM_RecipeHandling.MetricPrefixes.NONE,
+	expectedValue := 10000.0,
+	expectedUnit := CNM_RecipeHandling.AreaUnit.SQUARE_METER,
+	expectedPrefix:= CNM_RecipeHandling.MetricPrefixes.CENTI
+);
+THIS^.testConvertArea(
+	sourceValue := 1.0,
+	sourceUnit := CNM_RecipeHandling.AreaUnit.SQUARE_METER,
+	sourcePrefix := CNM_RecipeHandling.MetricPrefixes.NONE,
+	expectedValue := 0.000001,
+	expectedUnit := CNM_RecipeHandling.AreaUnit.SQUARE_METER,
+	expectedPrefix:= CNM_RecipeHandling.MetricPrefixes.KILO
+);
+THIS^.testConvertArea(
+	sourceValue := 1.0,
+	sourceUnit := CNM_RecipeHandling.AreaUnit.SQUARE_METER,
+	sourcePrefix := CNM_RecipeHandling.MetricPrefixes.NONE,
+	expectedValue := 1550.0031,
+	expectedUnit := CNM_RecipeHandling.AreaUnit.US_SQUARE_INCH,
+	expectedPrefix:= CNM_RecipeHandling.MetricPrefixes.NONE
+);
+THIS^.testConvertArea(
+	sourceValue := 1.0,
+	sourceUnit := CNM_RecipeHandling.AreaUnit.SQUARE_METER,
+	sourcePrefix := CNM_RecipeHandling.MetricPrefixes.NONE,
+	expectedValue := 10.7639,
+	expectedUnit := CNM_RecipeHandling.AreaUnit.US_SQUARE_FOOT,
+	expectedPrefix:= CNM_RecipeHandling.MetricPrefixes.NONE
+);
+THIS^.testConvertArea(
+	sourceValue := 1.0,
+	sourceUnit := CNM_RecipeHandling.AreaUnit.SQUARE_METER,
+	sourcePrefix := CNM_RecipeHandling.MetricPrefixes.NONE,
+	expectedValue := 1.19599,
+	expectedUnit := CNM_RecipeHandling.AreaUnit.US_SQUARE_YARD,
+	expectedPrefix:= CNM_RecipeHandling.MetricPrefixes.NONE
+);
+THIS^.testConvertArea(
+	sourceValue := 1.0,
+	sourceUnit := CNM_RecipeHandling.AreaUnit.SQUARE_METER,
+	sourcePrefix := CNM_RecipeHandling.MetricPrefixes.NONE,
+	expectedValue := 0.000247105,
+	expectedUnit := CNM_RecipeHandling.AreaUnit.US_ACRE,
+	expectedPrefix:= CNM_RecipeHandling.MetricPrefixes.NONE
+);
+THIS^.testConvertArea(
+	sourceValue := 1.0,
+	sourceUnit := CNM_RecipeHandling.AreaUnit.SQUARE_METER,
+	sourcePrefix := CNM_RecipeHandling.MetricPrefixes.KILO,
+	expectedValue := 1000000.0,
+	expectedUnit := CNM_RecipeHandling.AreaUnit.SQUARE_METER,
+	expectedPrefix:= CNM_RecipeHandling.MetricPrefixes.NONE
+);
+THIS^.testConvertArea(
+	sourceValue := 1.0,
+	sourceUnit := CNM_RecipeHandling.AreaUnit.SQUARE_METER,
+	sourcePrefix := CNM_RecipeHandling.MetricPrefixes.KILO,
+	expectedValue := 1195990.0463011,
+	expectedUnit := CNM_RecipeHandling.AreaUnit.US_SQUARE_YARD,
+	expectedPrefix:= CNM_RecipeHandling.MetricPrefixes.NONE
+);
+THIS^.testConvertArea(
+	sourceValue := 1.0,
+	sourceUnit := CNM_RecipeHandling.AreaUnit.SQUARE_METER,
+	sourcePrefix := CNM_RecipeHandling.MetricPrefixes.MILLI,
+	expectedValue := 0.000001,
+	expectedUnit := CNM_RecipeHandling.AreaUnit.SQUARE_METER,
+	expectedPrefix:= CNM_RecipeHandling.MetricPrefixes.NONE
+);
+THIS^.testConvertArea(
+	sourceValue := 1.0,
+	sourceUnit := CNM_RecipeHandling.AreaUnit.SQUARE_METER,
+	sourcePrefix := CNM_RecipeHandling.MetricPrefixes.KILO,
+	expectedValue := 1000000.0,
+	expectedUnit := CNM_RecipeHandling.AreaUnit.SQUARE_METER,
+	expectedPrefix:= CNM_RecipeHandling.MetricPrefixes.NONE
+);
+THIS^.testConvertArea(
+	sourceValue := 1.0,
+	sourceUnit := CNM_RecipeHandling.AreaUnit.SQUARE_METER,
+	sourcePrefix := CNM_RecipeHandling.MetricPrefixes.NONE,
+	expectedValue := 1000000000000.0,
+	expectedUnit := CNM_RecipeHandling.AreaUnit.SQUARE_METER,
+	expectedPrefix:= CNM_RecipeHandling.MetricPrefixes.MICRO
+);
+THIS^.testConvertArea(
+	sourceValue := 1.0,
+	sourceUnit := CNM_RecipeHandling.AreaUnit.SQUARE_METER,
+	sourcePrefix := CNM_RecipeHandling.MetricPrefixes.NONE,
+	expectedValue := 10000.0,
+	expectedUnit := CNM_RecipeHandling.AreaUnit.SQUARE_METER,
+	expectedPrefix:= CNM_RecipeHandling.MetricPrefixes.CENTI
+);
+THIS^.testConvertArea(
+	sourceValue := 1.0,
+	sourceUnit := CNM_RecipeHandling.AreaUnit.SQUARE_METER,
+	sourcePrefix := CNM_RecipeHandling.MetricPrefixes.CENTI,
+	expectedValue := 100.0,
+	expectedUnit := CNM_RecipeHandling.AreaUnit.SQUARE_METER,
+	expectedPrefix:= CNM_RecipeHandling.MetricPrefixes.MILLI
+);
+THIS^.testConvertArea(
+	sourceValue := 1.0,
+	sourceUnit := CNM_RecipeHandling.AreaUnit.SQUARE_METER,
+	sourcePrefix := CNM_RecipeHandling.MetricPrefixes.HECTO,
+	expectedValue := 10000.0,
+	expectedUnit := CNM_RecipeHandling.AreaUnit.SQUARE_METER,
+	expectedPrefix:= CNM_RecipeHandling.MetricPrefixes.NONE
+);
+THIS^.testConvertArea(
+	sourceValue := 0.0,
+	sourceUnit := CNM_RecipeHandling.AreaUnit.SQUARE_METER,
+	sourcePrefix := CNM_RecipeHandling.MetricPrefixes.NONE,
+	expectedValue := 0.0,
+	expectedUnit := CNM_RecipeHandling.AreaUnit.US_SQUARE_FOOT,
+	expectedPrefix:= CNM_RecipeHandling.MetricPrefixes.NONE
+);
+THIS^.testConvertArea(
+	sourceValue := -5.0,
+	sourceUnit := CNM_RecipeHandling.AreaUnit.SQUARE_METER,
+	sourcePrefix := CNM_RecipeHandling.MetricPrefixes.NONE,
+	expectedValue := -5.0,
+	expectedUnit := CNM_RecipeHandling.AreaUnit.SQUARE_METER,
+	expectedPrefix:= CNM_RecipeHandling.MetricPrefixes.NONE
+);
+THIS^.testConvertArea(
+	sourceValue := -5.0,
+	sourceUnit := CNM_RecipeHandling.AreaUnit.SQUARE_METER,
+	sourcePrefix := CNM_RecipeHandling.MetricPrefixes.KILO,
+	expectedValue := -1235.5269073,
+	expectedUnit := CNM_RecipeHandling.AreaUnit.US_ACRE,
+	expectedPrefix:= CNM_RecipeHandling.MetricPrefixes.NONE
+);
+THIS^.testConvertArea(
+	sourceValue := 0.000000000001,
+	sourceUnit := CNM_RecipeHandling.AreaUnit.SQUARE_METER,
+	sourcePrefix := CNM_RecipeHandling.MetricPrefixes.KILO,
+	expectedValue := 0.0000000002471053814,
+	expectedUnit := CNM_RecipeHandling.AreaUnit.US_ACRE,
+	expectedPrefix:= CNM_RecipeHandling.MetricPrefixes.NONE
+);
+THIS^.testConvertArea(
+	sourceValue := 123.456,
+	sourceUnit := CNM_RecipeHandling.AreaUnit.SQUARE_METER,
+	sourcePrefix := CNM_RecipeHandling.MetricPrefixes.NONE,
+	expectedValue := 1328.8693244,
+	expectedUnit := CNM_RecipeHandling.AreaUnit.US_SQUARE_FOOT,
+	expectedPrefix:= CNM_RecipeHandling.MetricPrefixes.NONE
+);
+THIS^.testConvertArea(
+	sourceValue := 1,
+	sourceUnit := CNM_RecipeHandling.AreaUnit.SQUARE_METER,
+	sourcePrefix := CNM_RecipeHandling.MetricPrefixes.KILO,
+	expectedValue := 0.24710538147,
+	expectedUnit := CNM_RecipeHandling.AreaUnit.US_ACRE,
+	expectedPrefix:= CNM_RecipeHandling.MetricPrefixes.KILO
+);
+THIS^.testConvertArea(
+	sourceValue := THIS^.MIN_SUBNORMAL,
+	sourceUnit := CNM_RecipeHandling.AreaUnit.SQUARE_METER,
+	sourcePrefix := CNM_RecipeHandling.MetricPrefixes.KILO,
+	expectedValue := THIS^.MIN_SUBNORMAL,
+	expectedUnit := CNM_RecipeHandling.AreaUnit.US_ACRE,
+	expectedPrefix:= CNM_RecipeHandling.MetricPrefixes.KILO
+);
+THIS^.testConvertArea(
+	sourceValue := THIS^.MAX_SUBNORMAL,
+	sourceUnit := CNM_RecipeHandling.AreaUnit.SQUARE_METER,
+	sourcePrefix := CNM_RecipeHandling.MetricPrefixes.KILO,
+	expectedValue := THIS^.MAX_SUBNORMAL,
+	expectedUnit := CNM_RecipeHandling.AreaUnit.US_ACRE,
+	expectedPrefix:= CNM_RecipeHandling.MetricPrefixes.KILO
+);
+THIS^.testConvertArea(
+	sourceValue := THIS^.MIN_SUBNORMAL,
+	sourceUnit := CNM_RecipeHandling.AreaUnit.SQUARE_METER,
+	sourcePrefix := CNM_RecipeHandling.MetricPrefixes.KILO,
+	expectedValue := THIS^.MIN_SUBNORMAL,
+	expectedUnit := CNM_RecipeHandling.AreaUnit.US_ACRE,
+	expectedPrefix:= CNM_RecipeHandling.MetricPrefixes.KILO
+);
+THIS^.testConvertArea(
+	sourceValue := THIS^.SMALLEST_NEGATIVE_SUBNORMAL,
+	sourceUnit := CNM_RecipeHandling.AreaUnit.SQUARE_METER,
+	sourcePrefix := CNM_RecipeHandling.MetricPrefixes.KILO,
+	expectedValue := THIS^.SMALLEST_NEGATIVE_SUBNORMAL,
+	expectedUnit := CNM_RecipeHandling.AreaUnit.US_ACRE,
+	expectedPrefix:= CNM_RecipeHandling.MetricPrefixes.KILO
+);
+THIS^.testConvertArea(
+	sourceValue := THIS^.MINUS_ZERO,
+	sourceUnit := CNM_RecipeHandling.AreaUnit.SQUARE_METER,
+	sourcePrefix := CNM_RecipeHandling.MetricPrefixes.KILO,
+	expectedValue := THIS^.MINUS_ZERO,
+	expectedUnit := CNM_RecipeHandling.AreaUnit.US_ACRE,
+	expectedPrefix:= CNM_RecipeHandling.MetricPrefixes.KILO
+);
+THIS^.testConvertArea(
+	sourceValue := THIS^.MINUS_ZERO,
+	sourceUnit := CNM_RecipeHandling.AreaUnit.SQUARE_METER,
+	sourcePrefix := CNM_RecipeHandling.MetricPrefixes.KILO,
+	expectedValue := THIS^.MINUS_ZERO,
+	expectedUnit := CNM_RecipeHandling.AreaUnit.US_ACRE,
+	expectedPrefix:= CNM_RecipeHandling.MetricPrefixes.KILO
+);
+THIS^.testConvertArea(
+	sourceValue := THIS^.SMALLEST_POSITIVE_SUBNORMAL,
+	sourceUnit := CNM_RecipeHandling.AreaUnit.SQUARE_METER,
+	sourcePrefix := CNM_RecipeHandling.MetricPrefixes.KILO,
+	expectedValue := THIS^.SMALLEST_POSITIVE_SUBNORMAL,
+	expectedUnit := CNM_RecipeHandling.AreaUnit.US_ACRE,
+	expectedPrefix:= CNM_RecipeHandling.MetricPrefixes.KILO
+);
+THIS^.testConvertAreaSpecialCases(
+	sourceValue := THIS^.NAN,
+	sourceUnit := CNM_RecipeHandling.AreaUnit.SQUARE_METER,
+	sourcePrefix := CNM_RecipeHandling.MetricPrefixes.KILO,
+	expectedValue := THIS^.NAN,
+	expectedUnit := CNM_RecipeHandling.AreaUnit.US_ACRE,
+	expectedPrefix:= CNM_RecipeHandling.MetricPrefixes.KILO
+);
+THIS^.testConvertAreaSpecialCases(
+	sourceValue := THIS^.INF,
+	sourceUnit := CNM_RecipeHandling.AreaUnit.SQUARE_METER,
+	sourcePrefix := CNM_RecipeHandling.MetricPrefixes.KILO,
+	expectedValue := THIS^.INF,
+	expectedUnit := CNM_RecipeHandling.AreaUnit.US_ACRE,
+	expectedPrefix:= CNM_RecipeHandling.MetricPrefixes.KILO
+);
+THIS^.testConvertAreaSpecialCases(
+	sourceValue := THIS^.MINUS_INF,
+	sourceUnit := CNM_RecipeHandling.AreaUnit.SQUARE_METER,
+	sourcePrefix := CNM_RecipeHandling.MetricPrefixes.KILO,
+	expectedValue := THIS^.MINUS_INF,
+	expectedUnit := CNM_RecipeHandling.AreaUnit.US_ACRE,
+	expectedPrefix:= CNM_RecipeHandling.MetricPrefixes.KILO
+);
+
+TcUnit.TEST_FINISHED();	]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="runConvertDuration" Id="{cc8fc277-e3db-460a-812e-6dd5fbcd9ed4}" FolderPath="ConvertDuration\">
+      <Declaration><![CDATA[(*
+
+short summary
+==================
+This test method tests ``ConvertDuration``
+method of CNM_RecipeHandling library with various inputs
+
+.. <legal notes>
+
+legal notes
+=================
+| SPDX-FileCopyrightText: © 2025 ekvip automation GmbH <info@ekvip.de>
+| SPDX-License-Identifier: Apache-2.0
+| For details check: Apache-2.0_
+
+.. _Apache-2.0: https://www.apache.org/licenses/LICENSE-2.0
+
+.. </legal notes>
+
+*)
+METHOD runConvertDuration
+VAR_INPUT
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[RETURN(NOT TcUnit.TEST_ORDERED('testConvertDuration'));
+
+THIS^.testConvertDuration(
+	sourceValue := 1.0,
+	sourceUnit := CNM_RecipeHandling.DurationUnit.SECONDS,
+	sourcePrefix := CNM_RecipeHandling.MetricPrefixes.NONE,
+	expectedValue := 1000.0,
+	expectedUnit := CNM_RecipeHandling.DurationUnit.SECONDS,
+	expectedPrefix:= CNM_RecipeHandling.MetricPrefixes.MILLI
+);
+THIS^.testConvertDuration(
+	sourceValue := 1.0,
+	sourceUnit := CNM_RecipeHandling.DurationUnit.SECONDS,
+	sourcePrefix := CNM_RecipeHandling.MetricPrefixes.NONE,
+	expectedValue := 0.0166667,
+	expectedUnit := CNM_RecipeHandling.DurationUnit.MINUTE,
+	expectedPrefix:= CNM_RecipeHandling.MetricPrefixes.NONE
+);
+THIS^.testConvertDuration(
+	sourceValue := 1.0,
+	sourceUnit := CNM_RecipeHandling.DurationUnit.SECONDS,
+	sourcePrefix := CNM_RecipeHandling.MetricPrefixes.NONE,
+	expectedValue := 0.000277778,
+	expectedUnit := CNM_RecipeHandling.DurationUnit.HOUR,
+	expectedPrefix:= CNM_RecipeHandling.MetricPrefixes.NONE
+);
+THIS^.testConvertDuration(
+	sourceValue := 1.0,
+	sourceUnit := CNM_RecipeHandling.DurationUnit.SECONDS,
+	sourcePrefix := CNM_RecipeHandling.MetricPrefixes.NONE,
+	expectedValue := 0.0000115741,
+	expectedUnit := CNM_RecipeHandling.DurationUnit.DAY,
+	expectedPrefix:= CNM_RecipeHandling.MetricPrefixes.NONE
+);
+THIS^.testConvertDuration(
+	sourceValue := 1.0,
+	sourceUnit := CNM_RecipeHandling.DurationUnit.MINUTE,
+	sourcePrefix := CNM_RecipeHandling.MetricPrefixes.NONE,
+	expectedValue := 60.0,
+	expectedUnit := CNM_RecipeHandling.DurationUnit.SECONDS,
+	expectedPrefix:= CNM_RecipeHandling.MetricPrefixes.NONE
+);
+THIS^.testConvertDuration(
+	sourceValue := 1.0,
+	sourceUnit := CNM_RecipeHandling.DurationUnit.MINUTE,
+	sourcePrefix := CNM_RecipeHandling.MetricPrefixes.NONE,
+	expectedValue := 60000.0,
+	expectedUnit := CNM_RecipeHandling.DurationUnit.SECONDS,
+	expectedPrefix:= CNM_RecipeHandling.MetricPrefixes.MILLI
+);
+THIS^.testConvertDuration(
+	sourceValue := 1.0,
+	sourceUnit := CNM_RecipeHandling.DurationUnit.MINUTE,
+	sourcePrefix := CNM_RecipeHandling.MetricPrefixes.NONE,
+	expectedValue :=  0.0166667 ,
+	expectedUnit := CNM_RecipeHandling.DurationUnit.HOUR,
+	expectedPrefix:= CNM_RecipeHandling.MetricPrefixes.NONE
+);
+THIS^.testConvertDuration(
+	sourceValue := 1.0,
+	sourceUnit := CNM_RecipeHandling.DurationUnit.MINUTE,
+	sourcePrefix := CNM_RecipeHandling.MetricPrefixes.NONE,
+	expectedValue :=  0.000694444,
+	expectedUnit := CNM_RecipeHandling.DurationUnit.DAY,
+	expectedPrefix:= CNM_RecipeHandling.MetricPrefixes.NONE
+);
+THIS^.testConvertDuration(
+	sourceValue := 1.0,
+	sourceUnit := CNM_RecipeHandling.DurationUnit.HOUR,
+	sourcePrefix := CNM_RecipeHandling.MetricPrefixes.NONE,
+	expectedValue := 3600.0,
+	expectedUnit := CNM_RecipeHandling.DurationUnit.SECONDS,
+	expectedPrefix:= CNM_RecipeHandling.MetricPrefixes.NONE
+);
+THIS^.testConvertDuration(
+	sourceValue := 1.0,
+	sourceUnit := CNM_RecipeHandling.DurationUnit.HOUR,
+	sourcePrefix := CNM_RecipeHandling.MetricPrefixes.NONE,
+	expectedValue := 60.0,
+	expectedUnit := CNM_RecipeHandling.DurationUnit.MINUTE,
+	expectedPrefix:= CNM_RecipeHandling.MetricPrefixes.NONE
+);
+THIS^.testConvertDuration(
+	sourceValue := 1.0,
+	sourceUnit := CNM_RecipeHandling.DurationUnit.HOUR,
+	sourcePrefix := CNM_RecipeHandling.MetricPrefixes.NONE,
+	expectedValue := 3600000.0,
+	expectedUnit := CNM_RecipeHandling.DurationUnit.SECONDS,
+	expectedPrefix:= CNM_RecipeHandling.MetricPrefixes.MILLI
+);
+THIS^.testConvertDuration(
+	sourceValue := 1.0,
+	sourceUnit := CNM_RecipeHandling.DurationUnit.HOUR,
+	sourcePrefix := CNM_RecipeHandling.MetricPrefixes.NONE,
+	expectedValue := 0.0416667,
+	expectedUnit := CNM_RecipeHandling.DurationUnit.DAY,
+	expectedPrefix:= CNM_RecipeHandling.MetricPrefixes.NONE
+);
+THIS^.testConvertDuration(
+	sourceValue := 1.0,
+	sourceUnit := CNM_RecipeHandling.DurationUnit.DAY,
+	sourcePrefix := CNM_RecipeHandling.MetricPrefixes.NONE,
+	expectedValue := 86400.0,
+	expectedUnit := CNM_RecipeHandling.DurationUnit.SECONDS,
+	expectedPrefix:= CNM_RecipeHandling.MetricPrefixes.NONE
+);
+THIS^.testConvertDuration(
+	sourceValue := 1.0,
+	sourceUnit := CNM_RecipeHandling.DurationUnit.DAY,
+	sourcePrefix := CNM_RecipeHandling.MetricPrefixes.NONE,
+	expectedValue := 1440.0,
+	expectedUnit := CNM_RecipeHandling.DurationUnit.MINUTE,
+	expectedPrefix:= CNM_RecipeHandling.MetricPrefixes.NONE
+);
+THIS^.testConvertDuration(
+	sourceValue := 1.0,
+	sourceUnit := CNM_RecipeHandling.DurationUnit.DAY,
+	sourcePrefix := CNM_RecipeHandling.MetricPrefixes.NONE,
+	expectedValue := 24.0,
+	expectedUnit := CNM_RecipeHandling.DurationUnit.HOUR,
+	expectedPrefix:= CNM_RecipeHandling.MetricPrefixes.NONE
+);
+THIS^.testConvertDuration(
+	sourceValue := 1.0,
+	sourceUnit := CNM_RecipeHandling.DurationUnit.DAY,
+	sourcePrefix := CNM_RecipeHandling.MetricPrefixes.NONE,
+	expectedValue := 86400000.0,
+	expectedUnit := CNM_RecipeHandling.DurationUnit.SECONDS,
+	expectedPrefix:= CNM_RecipeHandling.MetricPrefixes.MILLI
+);
+THIS^.testConvertDuration(
+	sourceValue := 0.0,
+	sourceUnit := CNM_RecipeHandling.DurationUnit.SECONDS,
+	sourcePrefix := CNM_RecipeHandling.MetricPrefixes.NONE,
+	expectedValue := 0.0,
+	expectedUnit := CNM_RecipeHandling.DurationUnit.SECONDS,
+	expectedPrefix:= CNM_RecipeHandling.MetricPrefixes.MILLI
+);
+THIS^.testConvertDuration(
+	sourceValue := 0.0,
+	sourceUnit := CNM_RecipeHandling.DurationUnit.MINUTE,
+	sourcePrefix := CNM_RecipeHandling.MetricPrefixes.NONE,
+	expectedValue := 0.0,
+	expectedUnit := CNM_RecipeHandling.DurationUnit.SECONDS,
+	expectedPrefix:= CNM_RecipeHandling.MetricPrefixes.NONE
+);
+THIS^.testConvertDuration(
+	sourceValue := 1000.0,
+	sourceUnit := CNM_RecipeHandling.DurationUnit.HOUR,
+	sourcePrefix := CNM_RecipeHandling.MetricPrefixes.NONE,
+	expectedValue := 3600000.0,
+	expectedUnit := CNM_RecipeHandling.DurationUnit.SECONDS,
+	expectedPrefix:= CNM_RecipeHandling.MetricPrefixes.NONE
+);
+THIS^.testConvertDuration(
+	sourceValue := 1000.0,
+	sourceUnit := CNM_RecipeHandling.DurationUnit.DAY,
+	sourcePrefix := CNM_RecipeHandling.MetricPrefixes.NONE,
+	expectedValue := 24000.0,
+	expectedUnit := CNM_RecipeHandling.DurationUnit.HOUR,
+	expectedPrefix:= CNM_RecipeHandling.MetricPrefixes.NONE
+);
+THIS^.testConvertDuration(
+	sourceValue := -1.0,
+	sourceUnit := CNM_RecipeHandling.DurationUnit.SECONDS,
+	sourcePrefix := CNM_RecipeHandling.MetricPrefixes.NONE,
+	expectedValue := -1000.0,
+	expectedUnit := CNM_RecipeHandling.DurationUnit.SECONDS,
+	expectedPrefix:= CNM_RecipeHandling.MetricPrefixes.MILLI
+);
+THIS^.testConvertDuration(
+	sourceValue := -1.0,
+	sourceUnit := CNM_RecipeHandling.DurationUnit.HOUR,
+	sourcePrefix := CNM_RecipeHandling.MetricPrefixes.NONE,
+	expectedValue := -60.0,
+	expectedUnit := CNM_RecipeHandling.DurationUnit.MINUTE,
+	expectedPrefix:= CNM_RecipeHandling.MetricPrefixes.NONE
+);
+THIS^.testConvertDuration(
+	sourceValue := 1.0,
+	sourceUnit := CNM_RecipeHandling.DurationUnit.HOUR,
+	sourcePrefix := CNM_RecipeHandling.MetricPrefixes.KILO,
+	expectedValue := 60.0,
+	expectedUnit := CNM_RecipeHandling.DurationUnit.MINUTE,
+	expectedPrefix:= CNM_RecipeHandling.MetricPrefixes.KILO
+);
+THIS^.testConvertDurationSpecialCases(
+	sourceValue := THIS^.NAN,
+	sourceUnit := CNM_RecipeHandling.DurationUnit.HOUR,
+	sourcePrefix := CNM_RecipeHandling.MetricPrefixes.KILO,
+	expectedValue := THIS^.NAN,
+	expectedUnit := CNM_RecipeHandling.DurationUnit.MINUTE,
+	expectedPrefix:= CNM_RecipeHandling.MetricPrefixes.KILO
+);
+THIS^.testConvertDurationSpecialCases(
+	sourceValue := THIS^.INF,
+	sourceUnit := CNM_RecipeHandling.DurationUnit.HOUR,
+	sourcePrefix := CNM_RecipeHandling.MetricPrefixes.KILO,
+	expectedValue := THIS^.INF,
+	expectedUnit := CNM_RecipeHandling.DurationUnit.MINUTE,
+	expectedPrefix:= CNM_RecipeHandling.MetricPrefixes.KILO
+);
+THIS^.testConvertDurationSpecialCases(
+	sourceValue := THIS^.MINUS_INF,
+	sourceUnit := CNM_RecipeHandling.DurationUnit.HOUR,
+	sourcePrefix := CNM_RecipeHandling.MetricPrefixes.KILO,
+	expectedValue := THIS^.MINUS_INF,
+	expectedUnit := CNM_RecipeHandling.DurationUnit.MINUTE,
+	expectedPrefix:= CNM_RecipeHandling.MetricPrefixes.KILO
+);
+THIS^.testConvertDuration(
+	sourceValue := THIS^.SMALLEST_NEGATIVE_SUBNORMAL,
+	sourceUnit := CNM_RecipeHandling.DurationUnit.HOUR,
+	sourcePrefix := CNM_RecipeHandling.MetricPrefixes.KILO,
+	expectedValue := THIS^.SMALLEST_NEGATIVE_SUBNORMAL,
+	expectedUnit := CNM_RecipeHandling.DurationUnit.MINUTE,
+	expectedPrefix:= CNM_RecipeHandling.MetricPrefixes.KILO
+);
+THIS^.testConvertDuration(
+	sourceValue := THIS^.SMALLEST_POSITIVE_SUBNORMAL,
+	sourceUnit := CNM_RecipeHandling.DurationUnit.HOUR,
+	sourcePrefix := CNM_RecipeHandling.MetricPrefixes.KILO,
+	expectedValue := THIS^.SMALLEST_POSITIVE_SUBNORMAL,
+	expectedUnit := CNM_RecipeHandling.DurationUnit.MINUTE,
+	expectedPrefix:= CNM_RecipeHandling.MetricPrefixes.KILO
+);
+THIS^.testConvertDuration(
+	sourceValue := THIS^.MIN_SUBNORMAL,
+	sourceUnit := CNM_RecipeHandling.DurationUnit.HOUR,
+	sourcePrefix := CNM_RecipeHandling.MetricPrefixes.KILO,
+	expectedValue := THIS^.MIN_SUBNORMAL,
+	expectedUnit := CNM_RecipeHandling.DurationUnit.MINUTE,
+	expectedPrefix:= CNM_RecipeHandling.MetricPrefixes.KILO
+);
+THIS^.testConvertDuration(
+	sourceValue := THIS^.MAX_SUBNORMAL,
+	sourceUnit := CNM_RecipeHandling.DurationUnit.HOUR,
+	sourcePrefix := CNM_RecipeHandling.MetricPrefixes.KILO,
+	expectedValue := THIS^.MAX_SUBNORMAL,
+	expectedUnit := CNM_RecipeHandling.DurationUnit.MINUTE,
+	expectedPrefix:= CNM_RecipeHandling.MetricPrefixes.KILO
+);
+TcUnit.TEST_FINISHED();	]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="runConvertLength" Id="{40db7572-8f62-4185-9c1c-3fbb724b33f9}" FolderPath="ConvertLength\">
+      <Declaration><![CDATA[(*
+
+short summary
+==================
+This test method tests ``ConvertLength``
+method of CNM_RecipeHandling library with various inputs
+
+.. <legal notes>
+
+legal notes
+=================
+| SPDX-FileCopyrightText: © 2025 ekvip automation GmbH <info@ekvip.de>
+| SPDX-License-Identifier: Apache-2.0
+| For details check: Apache-2.0_
+
+.. _Apache-2.0: https://www.apache.org/licenses/LICENSE-2.0
+
+.. </legal notes>
+
+*)
+
+METHOD runConvertLength
+VAR_INPUT
+END_VAR
+VAR
+	assertionShouldBeTrue: INT;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[RETURN(NOT TcUnit.TEST_ORDERED('testConvertLength'));
+
+//without prefix
+THIS^.testConvertLength(
+	sourceValue := 1.0,
+	sourceUnit := CNM_RecipeHandling.LengthUnit.METER,
+	sourcePrefix := CNM_RecipeHandling.MetricPrefixes.NONE,
+	expectedValue := 1.0,
+	expectedUnit := CNM_RecipeHandling.LengthUnit.METER,
+	expectedPrefix:= CNM_RecipeHandling.MetricPrefixes.NONE
+);
+
+THIS^.testConvertLength(
+	sourceValue := 1.0,
+	sourceUnit := CNM_RecipeHandling.LengthUnit.METER,
+	sourcePrefix := CNM_RecipeHandling.MetricPrefixes.NONE,
+	expectedValue := 39.37007874,
+	expectedUnit := CNM_RecipeHandling.LengthUnit.US_INCH,
+	expectedPrefix:= CNM_RecipeHandling.MetricPrefixes.NONE
+);
+THIS^.testConvertLength(
+	sourceValue := 1.0,
+	sourceUnit := CNM_RecipeHandling.LengthUnit.US_FOOT,
+	sourcePrefix := CNM_RecipeHandling.MetricPrefixes.NONE,
+	expectedValue := 0.3048,
+	expectedUnit := CNM_RecipeHandling.LengthUnit.METER,
+	expectedPrefix:= CNM_RecipeHandling.MetricPrefixes.NONE
+);
+THIS^.testConvertLength(
+	sourceValue := 1.0,
+	sourceUnit := CNM_RecipeHandling.LengthUnit.US_YARD,
+	sourcePrefix := CNM_RecipeHandling.MetricPrefixes.NONE,
+	expectedValue := 0.9144,
+	expectedUnit := CNM_RecipeHandling.LengthUnit.METER,
+	expectedPrefix:= CNM_RecipeHandling.MetricPrefixes.NONE
+);
+THIS^.testConvertLength(
+	sourceValue := 1.0,
+	sourceUnit := CNM_RecipeHandling.LengthUnit.US_MILE,
+	sourcePrefix := CNM_RecipeHandling.MetricPrefixes.NONE,
+	expectedValue := 1609.344,
+	expectedUnit := CNM_RecipeHandling.LengthUnit.METER,
+	expectedPrefix:= CNM_RecipeHandling.MetricPrefixes.NONE
+);
+THIS^.testConvertLength(
+	sourceValue := 1.0,
+	sourceUnit := CNM_RecipeHandling.LengthUnit.US_FOOT,
+	sourcePrefix := CNM_RecipeHandling.MetricPrefixes.NONE,
+	expectedValue := 12.0,
+	expectedUnit := CNM_RecipeHandling.LengthUnit.US_INCH,
+	expectedPrefix:= CNM_RecipeHandling.MetricPrefixes.NONE
+);
+THIS^.testConvertLength(
+	sourceValue := 1.0,
+	sourceUnit := CNM_RecipeHandling.LengthUnit.US_MIL,
+	sourcePrefix := CNM_RecipeHandling.MetricPrefixes.NONE,
+	expectedValue := 0.0000254,
+	expectedUnit := CNM_RecipeHandling.LengthUnit.METER,
+	expectedPrefix:= CNM_RecipeHandling.MetricPrefixes.NONE
+);
+//with and without prefix
+THIS^.testConvertLength(
+	sourceValue := 1.0,
+	sourceUnit := CNM_RecipeHandling.LengthUnit.METER,
+	sourcePrefix := CNM_RecipeHandling.MetricPrefixes.NONE,
+	expectedValue := 0.001,
+	expectedUnit := CNM_RecipeHandling.LengthUnit.METER,
+	expectedPrefix:= CNM_RecipeHandling.MetricPrefixes.KILO
+);
+THIS^.testConvertLength(
+	sourceValue := 1.0,
+	sourceUnit := CNM_RecipeHandling.LengthUnit.METER,
+	sourcePrefix := CNM_RecipeHandling.MetricPrefixes.KILO,
+	expectedValue := 1000.0,
+	expectedUnit := CNM_RecipeHandling.LengthUnit.METER,
+	expectedPrefix:= CNM_RecipeHandling.MetricPrefixes.NONE
+);
+THIS^.testConvertLength(
+	sourceValue := 1.0,
+	sourceUnit := CNM_RecipeHandling.LengthUnit.METER,
+	sourcePrefix := CNM_RecipeHandling.MetricPrefixes.MILLI,
+	expectedValue := 0.001,
+	expectedUnit := CNM_RecipeHandling.LengthUnit.METER,
+	expectedPrefix:= CNM_RecipeHandling.MetricPrefixes.NONE
+);
+THIS^.testConvertLength(
+	sourceValue := 1.0,
+	sourceUnit := CNM_RecipeHandling.LengthUnit.METER,
+	sourcePrefix := CNM_RecipeHandling.MetricPrefixes.CENTI,
+	expectedValue := 0.01,
+	expectedUnit := CNM_RecipeHandling.LengthUnit.METER,
+	expectedPrefix:= CNM_RecipeHandling.MetricPrefixes.NONE
+);
+THIS^.testConvertLength(
+	sourceValue := 1.0,
+	sourceUnit := CNM_RecipeHandling.LengthUnit.METER,
+	sourcePrefix := CNM_RecipeHandling.MetricPrefixes.NONE,
+	expectedValue := 100.0,
+	expectedUnit := CNM_RecipeHandling.LengthUnit.METER,
+	expectedPrefix:= CNM_RecipeHandling.MetricPrefixes.CENTI
+);
+THIS^.testConvertLength(
+	sourceValue := 1.0,
+	sourceUnit := CNM_RecipeHandling.LengthUnit.US_INCH,
+	sourcePrefix := CNM_RecipeHandling.MetricPrefixes.NONE,
+	expectedValue := 25.4,
+	expectedUnit := CNM_RecipeHandling.LengthUnit.METER,
+	expectedPrefix:= CNM_RecipeHandling.MetricPrefixes.MILLI
+);
+THIS^.testConvertLength(
+	sourceValue := 1.0,
+	sourceUnit := CNM_RecipeHandling.LengthUnit.US_FOOT,
+	sourcePrefix := CNM_RecipeHandling.MetricPrefixes.NONE,
+	expectedValue := 30.48,
+	expectedUnit := CNM_RecipeHandling.LengthUnit.METER,
+	expectedPrefix:= CNM_RecipeHandling.MetricPrefixes.CENTI
+);
+//with prefix
+THIS^.testConvertLength(
+	sourceValue := 1.0,
+	sourceUnit := CNM_RecipeHandling.LengthUnit.METER,
+	sourcePrefix := CNM_RecipeHandling.MetricPrefixes.MILLI,
+	expectedValue := 0.000001,
+	expectedUnit := CNM_RecipeHandling.LengthUnit.METER,
+	expectedPrefix:= CNM_RecipeHandling.MetricPrefixes.KILO
+);
+THIS^.testConvertLength(
+	sourceValue := 1.0,
+	sourceUnit := CNM_RecipeHandling.LengthUnit.METER,
+	sourcePrefix := CNM_RecipeHandling.MetricPrefixes.KILO,
+	expectedValue := 1000000,
+	expectedUnit := CNM_RecipeHandling.LengthUnit.METER,
+	expectedPrefix:= CNM_RecipeHandling.MetricPrefixes.MILLI
+);
+THIS^.testConvertLength(
+	sourceValue := 1.0,
+	sourceUnit := CNM_RecipeHandling.LengthUnit.METER,
+	sourcePrefix := CNM_RecipeHandling.MetricPrefixes.MEGA,
+	expectedValue := 1000000000.0,
+	expectedUnit := CNM_RecipeHandling.LengthUnit.METER,
+	expectedPrefix:= CNM_RecipeHandling.MetricPrefixes.MILLI
+);
+THIS^.testConvertLength(
+	sourceValue := 1.0,
+	sourceUnit := CNM_RecipeHandling.LengthUnit.METER,
+	sourcePrefix := CNM_RecipeHandling.MetricPrefixes.MILLI,
+	expectedValue := 0.0000000001,
+	expectedUnit := CNM_RecipeHandling.LengthUnit.METER,
+	expectedPrefix:= CNM_RecipeHandling.MetricPrefixes.MEGA
+);
+THIS^.testConvertLength(
+	sourceValue := 1.0,
+	sourceUnit := CNM_RecipeHandling.LengthUnit.METER,
+	sourcePrefix := CNM_RecipeHandling.MetricPrefixes.NANO,
+	expectedValue := 0.00000001,
+	expectedUnit := CNM_RecipeHandling.LengthUnit.METER,
+	expectedPrefix:= CNM_RecipeHandling.MetricPrefixes.CENTI
+);
+THIS^.testConvertLength(
+	sourceValue := THIS^.MINUS_ZERO,
+	sourceUnit := CNM_RecipeHandling.LengthUnit.METER,
+	sourcePrefix := CNM_RecipeHandling.MetricPrefixes.NANO,
+	expectedValue := THIS^.MINUS_ZERO,
+	expectedUnit := CNM_RecipeHandling.LengthUnit.METER,
+	expectedPrefix:= CNM_RecipeHandling.MetricPrefixes.CENTI
+);
+THIS^.testConvertLength(
+	sourceValue := THIS^.SMALLEST_NEGATIVE_SUBNORMAL,
+	sourceUnit := CNM_RecipeHandling.LengthUnit.METER,
+	sourcePrefix := CNM_RecipeHandling.MetricPrefixes.NANO,
+	expectedValue := THIS^.SMALLEST_NEGATIVE_SUBNORMAL,
+	expectedUnit := CNM_RecipeHandling.LengthUnit.METER,
+	expectedPrefix:= CNM_RecipeHandling.MetricPrefixes.CENTI
+);
+THIS^.testConvertLength(
+	sourceValue := THIS^.SMALLEST_POSITIVE_SUBNORMAL,
+	sourceUnit := CNM_RecipeHandling.LengthUnit.METER,
+	sourcePrefix := CNM_RecipeHandling.MetricPrefixes.NANO,
+	expectedValue := THIS^.SMALLEST_POSITIVE_SUBNORMAL,
+	expectedUnit := CNM_RecipeHandling.LengthUnit.METER,
+	expectedPrefix:= CNM_RecipeHandling.MetricPrefixes.CENTI
+);
+THIS^.testConvertLength(
+	sourceValue := THIS^.MAX_SUBNORMAL,
+	sourceUnit := CNM_RecipeHandling.LengthUnit.METER,
+	sourcePrefix := CNM_RecipeHandling.MetricPrefixes.NANO,
+	expectedValue := THIS^.MAX_SUBNORMAL,
+	expectedUnit := CNM_RecipeHandling.LengthUnit.METER,
+	expectedPrefix:= CNM_RecipeHandling.MetricPrefixes.CENTI
+);
+THIS^.testConvertLength(
+	sourceValue := THIS^.MIN_SUBNORMAL,
+	sourceUnit := CNM_RecipeHandling.LengthUnit.METER,
+	sourcePrefix := CNM_RecipeHandling.MetricPrefixes.NANO,
+	expectedValue := THIS^.MIN_SUBNORMAL,
+	expectedUnit := CNM_RecipeHandling.LengthUnit.METER,
+	expectedPrefix:= CNM_RecipeHandling.MetricPrefixes.CENTI
+);
+
+THIS^.testConvertLengthSpecialCases(
+	sourceValue := THIS^.NAN,
+	sourceUnit := CNM_RecipeHandling.LengthUnit.METER,
+	sourcePrefix := CNM_RecipeHandling.MetricPrefixes.NANO,
+	expectedValue := THIS^.NAN,
+	expectedUnit := CNM_RecipeHandling.LengthUnit.METER,
+	expectedPrefix:= CNM_RecipeHandling.MetricPrefixes.CENTI,
+);
+THIS^.testConvertLengthSpecialCases(
+	sourceValue := THIS^.MINUS_INF,
+	sourceUnit := CNM_RecipeHandling.LengthUnit.METER,
+	sourcePrefix := CNM_RecipeHandling.MetricPrefixes.NANO,
+	expectedValue := THIS^.MINUS_INF,
+	expectedUnit := CNM_RecipeHandling.LengthUnit.METER,
+	expectedPrefix:= CNM_RecipeHandling.MetricPrefixes.CENTI,
+);
+THIS^.testConvertLengthSpecialCases(
+	sourceValue := THIS^.INF,
+	sourceUnit := CNM_RecipeHandling.LengthUnit.METER,
+	sourcePrefix := CNM_RecipeHandling.MetricPrefixes.NANO,
+	expectedValue := THIS^.INF,
+	expectedUnit := CNM_RecipeHandling.LengthUnit.METER,
+	expectedPrefix:= CNM_RecipeHandling.MetricPrefixes.CENTI,
+);
+TcUnit.TEST_FINISHED();	]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="runConvertPressure" Id="{975d5a4d-bde2-46ab-ab67-5872720c1ddd}" FolderPath="ConvertPressure\">
+      <Declaration><![CDATA[(*
+
+short summary
+==================
+This test method tests ``ConvertPressure``
+method of CNM_RecipeHandling library with various inputs
+
+.. <legal notes>
+
+legal notes
+=================
+| SPDX-FileCopyrightText: © 2025 ekvip automation GmbH <info@ekvip.de>
+| SPDX-License-Identifier: Apache-2.0
+| For details check: Apache-2.0_
+
+.. _Apache-2.0: https://www.apache.org/licenses/LICENSE-2.0
+
+.. </legal notes>
+
+*)
+METHOD runConvertPressure
+VAR_INPUT
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[RETURN(NOT TcUnit.TEST_ORDERED('testConvertPressure'));
+THIS^.testConvertPressure(
+	sourceValue := 1.0,
+	sourceUnit := CNM_RecipeHandling.PressureUnit.PASCAL,
+	sourcePrefix := CNM_RecipeHandling.MetricPrefixes.NONE,
+	expectedValue := 0.00001,
+	expectedUnit := CNM_RecipeHandling.PressureUnit.BAR,
+	expectedPrefix:= CNM_RecipeHandling.MetricPrefixes.NONE
+);
+THIS^.testConvertPressure(
+	sourceValue := 1.0,
+	sourceUnit := CNM_RecipeHandling.PressureUnit.PASCAL,
+	sourcePrefix := CNM_RecipeHandling.MetricPrefixes.NONE,
+	expectedValue := 0.000145038,
+	expectedUnit := CNM_RecipeHandling.PressureUnit.PSI,
+	expectedPrefix:= CNM_RecipeHandling.MetricPrefixes.NONE
+);
+THIS^.testConvertPressure(
+	sourceValue := 1.0,
+	sourceUnit := CNM_RecipeHandling.PressureUnit.BAR,
+	sourcePrefix := CNM_RecipeHandling.MetricPrefixes.NONE,
+	expectedValue := 100000.0,
+	expectedUnit := CNM_RecipeHandling.PressureUnit.PASCAL,
+	expectedPrefix:= CNM_RecipeHandling.MetricPrefixes.NONE
+);
+THIS^.testConvertPressure(
+	sourceValue := 1.0,
+	sourceUnit := CNM_RecipeHandling.PressureUnit.BAR,
+	sourcePrefix := CNM_RecipeHandling.MetricPrefixes.NONE,
+	expectedValue := 14.5038,
+	expectedUnit := CNM_RecipeHandling.PressureUnit.PSI,
+	expectedPrefix:= CNM_RecipeHandling.MetricPrefixes.NONE
+);
+THIS^.testConvertPressure(
+	sourceValue := 1.0,
+	sourceUnit := CNM_RecipeHandling.PressureUnit.PSI,
+	sourcePrefix := CNM_RecipeHandling.MetricPrefixes.NONE,
+	expectedValue := 6894.76,
+	expectedUnit := CNM_RecipeHandling.PressureUnit.PASCAL,
+	expectedPrefix:= CNM_RecipeHandling.MetricPrefixes.NONE
+);
+THIS^.testConvertPressure(
+	sourceValue := 1.0,
+	sourceUnit := CNM_RecipeHandling.PressureUnit.PSI,
+	sourcePrefix := CNM_RecipeHandling.MetricPrefixes.NONE,
+	expectedValue := 0.0689476,
+	expectedUnit := CNM_RecipeHandling.PressureUnit.BAR,
+	expectedPrefix:= CNM_RecipeHandling.MetricPrefixes.NONE
+);
+THIS^.testConvertPressure(
+	sourceValue := 0.0,
+	sourceUnit := CNM_RecipeHandling.PressureUnit.BAR,
+	sourcePrefix := CNM_RecipeHandling.MetricPrefixes.NONE,
+	expectedValue := 0.0,
+	expectedUnit := CNM_RecipeHandling.PressureUnit.PASCAL,
+	expectedPrefix:= CNM_RecipeHandling.MetricPrefixes.NONE
+);
+THIS^.testConvertPressure(
+	sourceValue := 0.0,
+	sourceUnit := CNM_RecipeHandling.PressureUnit.BAR,
+	sourcePrefix := CNM_RecipeHandling.MetricPrefixes.NONE,
+	expectedValue := 0.0,
+	expectedUnit := CNM_RecipeHandling.PressureUnit.PSI,
+	expectedPrefix:= CNM_RecipeHandling.MetricPrefixes.NONE
+);
+THIS^.testConvertPressure(
+	sourceValue := 1000.0,
+	sourceUnit := CNM_RecipeHandling.PressureUnit.BAR,
+	sourcePrefix := CNM_RecipeHandling.MetricPrefixes.NONE,
+	expectedValue := 100000000.0,
+	expectedUnit := CNM_RecipeHandling.PressureUnit.PASCAL,
+	expectedPrefix:= CNM_RecipeHandling.MetricPrefixes.NONE
+);
+THIS^.testConvertPressure(
+	sourceValue := 1000.0,
+	sourceUnit := CNM_RecipeHandling.PressureUnit.BAR,
+	sourcePrefix := CNM_RecipeHandling.MetricPrefixes.NONE,
+	expectedValue := 14503.773773,
+	expectedUnit := CNM_RecipeHandling.PressureUnit.PSI,
+	expectedPrefix:= CNM_RecipeHandling.MetricPrefixes.NONE
+);
+THIS^.testConvertPressure(
+	sourceValue := 1000.0,
+	sourceUnit := CNM_RecipeHandling.PressureUnit.PSI,
+	sourcePrefix := CNM_RecipeHandling.MetricPrefixes.NONE,
+	expectedValue := 6894760.0,
+	expectedUnit := CNM_RecipeHandling.PressureUnit.PASCAL,
+	expectedPrefix:= CNM_RecipeHandling.MetricPrefixes.NONE
+);
+THIS^.testConvertPressure(
+	sourceValue := 1000.0,
+	sourceUnit := CNM_RecipeHandling.PressureUnit.PSI,
+	sourcePrefix := CNM_RecipeHandling.MetricPrefixes.NONE,
+	expectedValue := 68.9476,
+	expectedUnit := CNM_RecipeHandling.PressureUnit.BAR,
+	expectedPrefix:= CNM_RecipeHandling.MetricPrefixes.NONE
+);
+THIS^.testConvertPressure(
+	sourceValue := -1.0,
+	sourceUnit := CNM_RecipeHandling.PressureUnit.BAR,
+	sourcePrefix := CNM_RecipeHandling.MetricPrefixes.NONE,
+	expectedValue := -100000.0,
+	expectedUnit := CNM_RecipeHandling.PressureUnit.PASCAL,
+	expectedPrefix:= CNM_RecipeHandling.MetricPrefixes.NONE
+);
+THIS^.testConvertPressure(
+	sourceValue := -1.0,
+	sourceUnit := CNM_RecipeHandling.PressureUnit.BAR,
+	sourcePrefix := CNM_RecipeHandling.MetricPrefixes.NONE,
+	expectedValue := -14.5038,
+	expectedUnit := CNM_RecipeHandling.PressureUnit.PSI,
+	expectedPrefix:= CNM_RecipeHandling.MetricPrefixes.NONE
+);
+THIS^.testConvertPressure(
+	sourceValue := -1.0,
+	sourceUnit := CNM_RecipeHandling.PressureUnit.PSI,
+	sourcePrefix := CNM_RecipeHandling.MetricPrefixes.NONE,
+	expectedValue := -6894.76,
+	expectedUnit := CNM_RecipeHandling.PressureUnit.PASCAL,
+	expectedPrefix:= CNM_RecipeHandling.MetricPrefixes.NONE
+);
+THIS^.testConvertPressure(
+	sourceValue := -1.0,
+	sourceUnit := CNM_RecipeHandling.PressureUnit.PSI,
+	sourcePrefix := CNM_RecipeHandling.MetricPrefixes.NONE,
+	expectedValue := -0.0689476,
+	expectedUnit := CNM_RecipeHandling.PressureUnit.BAR,
+	expectedPrefix:= CNM_RecipeHandling.MetricPrefixes.NONE
+);
+THIS^.testConvertPressure(
+	sourceValue := 1.0,
+	sourcePrefix := CNM_RecipeHandling.MetricPrefixes.KILO,
+	sourceUnit := CNM_RecipeHandling.PressureUnit.BAR,
+	expectedValue := 1000,
+	expectedUnit := CNM_RecipeHandling.PressureUnit.BAR,
+	expectedPrefix:= CNM_RecipeHandling.MetricPrefixes.NONE
+);
+THIS^.testConvertPressure(
+	sourceValue := 1.0,
+	sourcePrefix := CNM_RecipeHandling.MetricPrefixes.HECTO,
+	sourceUnit := CNM_RecipeHandling.PressureUnit.BAR,
+	expectedValue := 100,
+	expectedUnit := CNM_RecipeHandling.PressureUnit.BAR,
+	expectedPrefix:= CNM_RecipeHandling.MetricPrefixes.NONE
+);
+THIS^.testConvertPressure(
+	sourceValue := 1.0,
+	sourcePrefix := CNM_RecipeHandling.MetricPrefixes.DEKA,
+	sourceUnit := CNM_RecipeHandling.PressureUnit.BAR,
+	expectedValue := 10.0,
+	expectedUnit := CNM_RecipeHandling.PressureUnit.BAR,
+	expectedPrefix:= CNM_RecipeHandling.MetricPrefixes.NONE
+);
+THIS^.testConvertPressure(
+	sourceValue := 1.0,
+	sourcePrefix := CNM_RecipeHandling.MetricPrefixes.MILLI,
+	sourceUnit := CNM_RecipeHandling.PressureUnit.BAR,
+	expectedValue := 0.001,
+	expectedUnit := CNM_RecipeHandling.PressureUnit.BAR,
+	expectedPrefix:= CNM_RecipeHandling.MetricPrefixes.NONE
+);
+THIS^.testConvertPressure(
+	sourceValue := 1.0,
+	sourcePrefix := CNM_RecipeHandling.MetricPrefixes.KILO,
+	sourceUnit := CNM_RecipeHandling.PressureUnit.PASCAL,
+	expectedValue := 1000.0,
+	expectedUnit := CNM_RecipeHandling.PressureUnit.PASCAL,
+	expectedPrefix:= CNM_RecipeHandling.MetricPrefixes.NONE
+);
+THIS^.testConvertPressure(
+	sourceValue := 1.0,
+	sourcePrefix := CNM_RecipeHandling.MetricPrefixes.HECTO,
+	sourceUnit := CNM_RecipeHandling.PressureUnit.PASCAL,
+	expectedValue := 100.0,
+	expectedUnit := CNM_RecipeHandling.PressureUnit.PASCAL,
+	expectedPrefix:= CNM_RecipeHandling.MetricPrefixes.NONE
+);
+THIS^.testConvertPressure(
+	sourceValue := THIS^.MINUS_ZERO,
+	sourcePrefix := CNM_RecipeHandling.MetricPrefixes.HECTO,
+	sourceUnit := CNM_RecipeHandling.PressureUnit.PASCAL,
+	expectedValue := THIS^.MINUS_ZERO,
+	expectedUnit := CNM_RecipeHandling.PressureUnit.PASCAL,
+	expectedPrefix:= CNM_RecipeHandling.MetricPrefixes.NONE
+);
+THIS^.testConvertPressure(
+	sourceValue := THIS^.SMALLEST_NEGATIVE_SUBNORMAL,
+	sourcePrefix := CNM_RecipeHandling.MetricPrefixes.HECTO,
+	sourceUnit := CNM_RecipeHandling.PressureUnit.PASCAL,
+	expectedValue := THIS^.SMALLEST_NEGATIVE_SUBNORMAL,
+	expectedUnit := CNM_RecipeHandling.PressureUnit.PASCAL,
+	expectedPrefix:= CNM_RecipeHandling.MetricPrefixes.NONE
+);
+
+THIS^.testConvertPressure(
+	sourceValue := THIS^.SMALLEST_POSITIVE_SUBNORMAL,
+	sourcePrefix := CNM_RecipeHandling.MetricPrefixes.HECTO,
+	sourceUnit := CNM_RecipeHandling.PressureUnit.PASCAL,
+	expectedValue := THIS^.SMALLEST_POSITIVE_SUBNORMAL,
+	expectedUnit := CNM_RecipeHandling.PressureUnit.PASCAL,
+	expectedPrefix:= CNM_RecipeHandling.MetricPrefixes.NONE
+);
+THIS^.testConvertPressure(
+	sourceValue := THIS^.MIN_SUBNORMAL,
+	sourcePrefix := CNM_RecipeHandling.MetricPrefixes.HECTO,
+	sourceUnit := CNM_RecipeHandling.PressureUnit.PASCAL,
+	expectedValue := THIS^.MIN_SUBNORMAL,
+	expectedUnit := CNM_RecipeHandling.PressureUnit.PASCAL,
+	expectedPrefix:= CNM_RecipeHandling.MetricPrefixes.NONE
+);
+THIS^.testConvertPressure(
+	sourceValue := THIS^.MAX_SUBNORMAL,
+	sourcePrefix := CNM_RecipeHandling.MetricPrefixes.HECTO,
+	sourceUnit := CNM_RecipeHandling.PressureUnit.PASCAL,
+	expectedValue := THIS^.MAX_SUBNORMAL,
+	expectedUnit := CNM_RecipeHandling.PressureUnit.PASCAL,
+	expectedPrefix:= CNM_RecipeHandling.MetricPrefixes.NONE
+);
+THIS^.testConvertPressureSpecialCases(
+	sourceValue := THIS^.NAN,
+	sourcePrefix := CNM_RecipeHandling.MetricPrefixes.HECTO,
+	sourceUnit := CNM_RecipeHandling.PressureUnit.PASCAL,
+	expectedValue := THIS^.NAN,
+	expectedUnit := CNM_RecipeHandling.PressureUnit.PASCAL,
+	expectedPrefix:= CNM_RecipeHandling.MetricPrefixes.NONE
+);
+THIS^.testConvertPressureSpecialCases(
+	sourceValue := THIS^.MINUS_INF,
+	sourcePrefix := CNM_RecipeHandling.MetricPrefixes.HECTO,
+	sourceUnit := CNM_RecipeHandling.PressureUnit.PASCAL,
+	expectedValue := THIS^.MINUS_INF,
+	expectedUnit := CNM_RecipeHandling.PressureUnit.PASCAL,
+	expectedPrefix:= CNM_RecipeHandling.MetricPrefixes.NONE
+);
+THIS^.testConvertPressureSpecialCases(
+	sourceValue := THIS^.INF,
+	sourcePrefix := CNM_RecipeHandling.MetricPrefixes.HECTO,
+	sourceUnit := CNM_RecipeHandling.PressureUnit.PASCAL,
+	expectedValue := THIS^.INF,
+	expectedUnit := CNM_RecipeHandling.PressureUnit.PASCAL,
+	expectedPrefix:= CNM_RecipeHandling.MetricPrefixes.NONE
+);
+TcUnit.TEST_FINISHED();	]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="runConvertTemprature" Id="{a2144582-b504-4d03-bb17-32d3c33c414b}" FolderPath="ConvertTemperature\">
+      <Declaration><![CDATA[(*
+
+short summary
+==================
+This test method tests ``ConvertTemprature``
+method of CNM_RecipeHandling library with various inputs
+
+.. <legal notes>
+
+legal notes
+=================
+| SPDX-FileCopyrightText: © 2025 ekvip automation GmbH <info@ekvip.de>
+| SPDX-License-Identifier: Apache-2.0
+| For details check: Apache-2.0_
+
+.. _Apache-2.0: https://www.apache.org/licenses/LICENSE-2.0
+
+.. </legal notes>
+
+*)
+
+METHOD runConvertTemprature : REFERENCE TO FB_Test
+VAR_INPUT
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[RETURN(NOT TcUnit.TEST_ORDERED('testConvertTemprature'));
+THIS^.testConvertTemprature(
+	sourceValue := 0.0,
+	sourceUnit := CNM_RecipeHandling.TemperatureUnit.DEGREE_CELSIUS,
+	expectedValue := 32.0 ,
+	expectedUnit := CNM_RecipeHandling.TemperatureUnit.DEGREE_FAHRENHEIT
+);
+THIS^.testConvertTemprature(
+	sourceValue := 100.0,
+	sourceUnit := CNM_RecipeHandling.TemperatureUnit.DEGREE_CELSIUS,
+	expectedValue := 212.0 ,
+	expectedUnit := CNM_RecipeHandling.TemperatureUnit.DEGREE_FAHRENHEIT
+);
+THIS^.testConvertTemprature(
+	sourceValue := -40.0,
+	sourceUnit := CNM_RecipeHandling.TemperatureUnit.DEGREE_CELSIUS,
+	expectedValue := -40.0 ,
+	expectedUnit := CNM_RecipeHandling.TemperatureUnit.DEGREE_FAHRENHEIT
+);
+THIS^.testConvertTemprature(
+	sourceValue := 0.0,
+	sourceUnit := CNM_RecipeHandling.TemperatureUnit.DEGREE_CELSIUS,
+	expectedValue := 273.15 ,
+	expectedUnit := CNM_RecipeHandling.TemperatureUnit.KELVIN
+);
+THIS^.testConvertTemprature(
+	sourceValue := 100.0,
+	sourceUnit := CNM_RecipeHandling.TemperatureUnit.DEGREE_CELSIUS,
+	expectedValue := 373.15 ,
+	expectedUnit := CNM_RecipeHandling.TemperatureUnit.KELVIN
+);
+THIS^.testConvertTemprature(
+	sourceValue := -273.15,
+	sourceUnit := CNM_RecipeHandling.TemperatureUnit.DEGREE_CELSIUS,
+	expectedValue := 0.0 ,
+	expectedUnit := CNM_RecipeHandling.TemperatureUnit.KELVIN
+);
+THIS^.testConvertTemprature(
+	sourceValue := 32.0,
+	sourceUnit := CNM_RecipeHandling.TemperatureUnit.DEGREE_FAHRENHEIT,
+	expectedValue := 0.0 ,
+	expectedUnit := CNM_RecipeHandling.TemperatureUnit.DEGREE_CELSIUS
+);
+THIS^.testConvertTemprature(
+	sourceValue := 212.0,
+	sourceUnit := CNM_RecipeHandling.TemperatureUnit.DEGREE_FAHRENHEIT,
+	expectedValue := 100.0 ,
+	expectedUnit := CNM_RecipeHandling.TemperatureUnit.DEGREE_CELSIUS
+);
+THIS^.testConvertTemprature(
+	sourceValue := 273.15,
+	sourceUnit := CNM_RecipeHandling.TemperatureUnit.KELVIN,
+	expectedValue := 0.0 ,
+	expectedUnit := CNM_RecipeHandling.TemperatureUnit.DEGREE_CELSIUS
+);
+THIS^.testConvertTemprature(
+	sourceValue := 373.15,
+	sourceUnit := CNM_RecipeHandling.TemperatureUnit.KELVIN,
+	expectedValue := 100.0 ,
+	expectedUnit := CNM_RecipeHandling.TemperatureUnit.DEGREE_CELSIUS
+);
+THIS^.testConvertTemprature(
+	sourceValue := 273.15,
+	sourceUnit := CNM_RecipeHandling.TemperatureUnit.KELVIN,
+	expectedValue := 32.0 ,
+	expectedUnit := CNM_RecipeHandling.TemperatureUnit.DEGREE_FAHRENHEIT
+);
+THIS^.testConvertTemprature(
+	sourceValue := 0.0,
+	sourceUnit := CNM_RecipeHandling.TemperatureUnit.KELVIN,
+	expectedValue := -459.67 ,
+	expectedUnit := CNM_RecipeHandling.TemperatureUnit.DEGREE_FAHRENHEIT
+);
+THIS^.testConvertTemprature(
+	sourceValue := 0.0,
+	sourceUnit := CNM_RecipeHandling.TemperatureUnit.DEGREE_FAHRENHEIT,
+	expectedValue := -17.7778 ,
+	expectedUnit := CNM_RecipeHandling.TemperatureUnit.DEGREE_CELSIUS
+);
+THIS^.testConvertTemprature(
+	sourceValue := 0.0,
+	sourceUnit := CNM_RecipeHandling.TemperatureUnit.DEGREE_FAHRENHEIT,
+	expectedValue := -17.7778 ,
+	expectedUnit := CNM_RecipeHandling.TemperatureUnit.DEGREE_CELSIUS
+);
+THIS^.testConvertTemprature(
+	sourceValue := -100.0,
+	sourceUnit := CNM_RecipeHandling.TemperatureUnit.DEGREE_CELSIUS,
+	expectedValue := -148 ,
+	expectedUnit := CNM_RecipeHandling.TemperatureUnit.DEGREE_FAHRENHEIT
+);
+THIS^.testConvertTemprature(
+	sourceValue := THIS^.MINUS_ZERO,
+	sourceUnit := CNM_RecipeHandling.TemperatureUnit.DEGREE_CELSIUS,
+	expectedValue := 32.0,
+	expectedUnit := CNM_RecipeHandling.TemperatureUnit.DEGREE_FAHRENHEIT
+);
+THIS^.testConvertTemprature(
+	sourceValue := THIS^.MIN_SUBNORMAL,
+	sourceUnit := CNM_RecipeHandling.TemperatureUnit.DEGREE_CELSIUS,
+	expectedValue := 32.0,
+	expectedUnit := CNM_RecipeHandling.TemperatureUnit.DEGREE_FAHRENHEIT
+);
+THIS^.testConvertTemprature(
+	sourceValue := THIS^.MAX_SUBNORMAL,
+	sourceUnit := CNM_RecipeHandling.TemperatureUnit.DEGREE_CELSIUS,
+	expectedValue := 32.0,
+	expectedUnit := CNM_RecipeHandling.TemperatureUnit.DEGREE_FAHRENHEIT
+);
+THIS^.testConvertTemprature(
+	sourceValue := THIS^.SMALLEST_NEGATIVE_SUBNORMAL,
+	sourceUnit := CNM_RecipeHandling.TemperatureUnit.DEGREE_CELSIUS,
+	expectedValue := 32.0,
+	expectedUnit := CNM_RecipeHandling.TemperatureUnit.DEGREE_FAHRENHEIT
+);
+THIS^.testConvertTemprature(
+	sourceValue := THIS^.SMALLEST_POSITIVE_SUBNORMAL,
+	sourceUnit := CNM_RecipeHandling.TemperatureUnit.DEGREE_CELSIUS,
+	expectedValue := 32.0,
+	expectedUnit := CNM_RecipeHandling.TemperatureUnit.DEGREE_FAHRENHEIT
+);
+THIS^.testConvertTempratureSpecialCases(
+	sourceValue := THIS^.NAN,
+	sourceUnit := CNM_RecipeHandling.TemperatureUnit.DEGREE_CELSIUS,
+	expectedValue := THIS^.NAN ,
+	expectedUnit := CNM_RecipeHandling.TemperatureUnit.DEGREE_FAHRENHEIT,
+);
+THIS^.testConvertTempratureSpecialCases(
+	sourceValue := THIS^.INF,
+	sourceUnit := CNM_RecipeHandling.TemperatureUnit.DEGREE_CELSIUS,
+	expectedValue := THIS^.INF ,
+	expectedUnit := CNM_RecipeHandling.TemperatureUnit.DEGREE_FAHRENHEIT,
+);
+THIS^.testConvertTempratureSpecialCases(
+	sourceValue := THIS^.MINUS_INF,
+	sourceUnit := CNM_RecipeHandling.TemperatureUnit.DEGREE_CELSIUS,
+	expectedValue := THIS^.MINUS_INF ,
+	expectedUnit := CNM_RecipeHandling.TemperatureUnit.DEGREE_FAHRENHEIT,
+);
+TcUnit.TEST_FINISHED();	]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="runConvertVelocity" Id="{f6264b2b-aa9a-4d6f-9927-cd93df06e7e5}" FolderPath="ConvertVelocity\">
+      <Declaration><![CDATA[(*
+
+short summary
+==================
+This test method tests ``ConvertVelocity``
+method of CNM_RecipeHandling library with various inputs
+
+.. <legal notes>
+
+legal notes
+=================
+| SPDX-FileCopyrightText: © 2025 ekvip automation GmbH <info@ekvip.de>
+| SPDX-License-Identifier: Apache-2.0
+| For details check: Apache-2.0_
+
+.. _Apache-2.0: https://www.apache.org/licenses/LICENSE-2.0
+
+.. </legal notes>
+
+*)
+
+METHOD runConvertVelocity
+VAR_INPUT
+END_VAR
+
+VAR
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[RETURN(NOT TcUnit.TEST_ORDERED('testConvertVelocity'));
+THIS^.testConvertVelocity(
+	sourceVelocityValue := 100.0,
+	
+	sourceUnit := CNM_RecipeHandling.LengthUnit.METER,
+	sourceDistancePrefix := CNM_RecipeHandling.MetricPrefixes.kilo,
+	
+	sourceDurationUnit := CNM_RecipeHandling.DurationUnit.HOUR,
+	sourceDurationPrefix := CNM_RecipeHandling.MetricPrefixes.NONE,
+	
+	expectedVelocityValue:= 27.78,
+
+	expectedDistanceUnit := CNM_RecipeHandling.LengthUnit.METER,
+	expectedDistancePrefix:= CNM_RecipeHandling.MetricPrefixes.NONE,
+
+	expectedDurationUnit := CNM_RecipeHandling.DurationUnit.SECONDS,
+	expectedDurationPrefix:= CNM_RecipeHandling.MetricPrefixes.NONE,
+	assertionShouldBeTrue := True
+);
+THIS^.testConvertVelocity(
+	sourceVelocityValue := 27.78 ,
+	
+	sourceUnit := CNM_RecipeHandling.LengthUnit.METER,
+	sourceDistancePrefix := CNM_RecipeHandling.MetricPrefixes.NONE,
+	
+	sourceDurationUnit := CNM_RecipeHandling.DurationUnit.SECONDS,
+	sourceDurationPrefix := CNM_RecipeHandling.MetricPrefixes.NONE,
+	
+	expectedVelocityValue:= 100.0,
+
+	expectedDistanceUnit := CNM_RecipeHandling.LengthUnit.METER,
+	expectedDistancePrefix:= CNM_RecipeHandling.MetricPrefixes.KILO,
+
+	expectedDurationUnit := CNM_RecipeHandling.DurationUnit.HOUR,
+	expectedDurationPrefix:= CNM_RecipeHandling.MetricPrefixes.NONE,
+	assertionShouldBeTrue := True
+);
+THIS^.testConvertVelocity(
+	sourceVelocityValue := 0.0 ,
+	
+	sourceUnit := CNM_RecipeHandling.LengthUnit.METER,
+	sourceDistancePrefix := CNM_RecipeHandling.MetricPrefixes.NONE,
+	
+	sourceDurationUnit := CNM_RecipeHandling.DurationUnit.SECONDS,
+	sourceDurationPrefix := CNM_RecipeHandling.MetricPrefixes.NONE,
+	
+	expectedVelocityValue:= 0.0,
+
+	expectedDistanceUnit := CNM_RecipeHandling.LengthUnit.METER,
+	expectedDistancePrefix:= CNM_RecipeHandling.MetricPrefixes.KILO,
+
+	expectedDurationUnit := CNM_RecipeHandling.DurationUnit.HOUR,
+	expectedDurationPrefix:= CNM_RecipeHandling.MetricPrefixes.NONE,
+	assertionShouldBeTrue := True
+);
+THIS^.testConvertVelocity(
+	sourceVelocityValue := 0.0 ,
+	
+	sourceUnit := CNM_RecipeHandling.LengthUnit.METER,
+	sourceDistancePrefix := CNM_RecipeHandling.MetricPrefixes.KILO,
+	
+	sourceDurationUnit := CNM_RecipeHandling.DurationUnit.HOUR,
+	sourceDurationPrefix := CNM_RecipeHandling.MetricPrefixes.NONE,
+	
+	expectedVelocityValue:= 0.0,
+
+	expectedDistanceUnit := CNM_RecipeHandling.LengthUnit.METER,
+	expectedDistancePrefix:= CNM_RecipeHandling.MetricPrefixes.NONE,
+
+	expectedDurationUnit := CNM_RecipeHandling.DurationUnit.SECONDS,
+	expectedDurationPrefix:= CNM_RecipeHandling.MetricPrefixes.NONE,
+	assertionShouldBeTrue := True
+);
+THIS^.testConvertVelocity(
+	sourceVelocityValue := 299792458.0 ,
+	
+	sourceUnit := CNM_RecipeHandling.LengthUnit.METER,
+	sourceDistancePrefix := CNM_RecipeHandling.MetricPrefixes.NONE,
+	
+	sourceDurationUnit := CNM_RecipeHandling.DurationUnit.SECONDS,
+	sourceDurationPrefix := CNM_RecipeHandling.MetricPrefixes.NONE,
+	
+	expectedVelocityValue:= 1079252848.8,
+
+	expectedDistanceUnit := CNM_RecipeHandling.LengthUnit.METER,
+	expectedDistancePrefix:= CNM_RecipeHandling.MetricPrefixes.KILO,
+
+	expectedDurationUnit := CNM_RecipeHandling.DurationUnit.HOUR,
+	expectedDurationPrefix:= CNM_RecipeHandling.MetricPrefixes.NONE,
+	assertionShouldBeTrue := True
+);
+THIS^.testConvertVelocity(
+	sourceVelocityValue := 0.0001  ,
+	
+	sourceUnit := CNM_RecipeHandling.LengthUnit.METER,
+	sourceDistancePrefix := CNM_RecipeHandling.MetricPrefixes.KILO,
+	
+	sourceDurationUnit := CNM_RecipeHandling.DurationUnit.HOUR,
+	sourceDurationPrefix := CNM_RecipeHandling.MetricPrefixes.NONE,
+	
+	expectedVelocityValue:= 0.00002778,
+
+	expectedDistanceUnit := CNM_RecipeHandling.LengthUnit.METER,
+	expectedDistancePrefix:= CNM_RecipeHandling.MetricPrefixes.NONE,
+
+	expectedDurationUnit := CNM_RecipeHandling.DurationUnit.SECONDS,
+	expectedDurationPrefix:= CNM_RecipeHandling.MetricPrefixes.NONE,
+	assertionShouldBeTrue := True
+);
+THIS^.testConvertVelocity(
+	sourceVelocityValue := -100.0,
+	
+	sourceUnit := CNM_RecipeHandling.LengthUnit.METER,
+	sourceDistancePrefix := CNM_RecipeHandling.MetricPrefixes.KILO,
+	
+	sourceDurationUnit := CNM_RecipeHandling.DurationUnit.HOUR,
+	sourceDurationPrefix := CNM_RecipeHandling.MetricPrefixes.NONE,
+	
+	expectedVelocityValue:= -27.78,
+
+	expectedDistanceUnit := CNM_RecipeHandling.LengthUnit.METER,
+	expectedDistancePrefix:= CNM_RecipeHandling.MetricPrefixes.NONE,
+
+	expectedDurationUnit := CNM_RecipeHandling.DurationUnit.SECONDS,
+	expectedDurationPrefix:= CNM_RecipeHandling.MetricPrefixes.NONE,
+	assertionShouldBeTrue := True
+);
+THIS^.testConvertVelocity(
+	sourceVelocityValue := 1000000.0,
+	
+	sourceUnit := CNM_RecipeHandling.LengthUnit.METER,
+	sourceDistancePrefix := CNM_RecipeHandling.MetricPrefixes.NONE,
+	
+	sourceDurationUnit := CNM_RecipeHandling.DurationUnit.SECONDS,
+	sourceDurationPrefix := CNM_RecipeHandling.MetricPrefixes.NONE,
+	
+	expectedVelocityValue:= 3600000.0,
+
+	expectedDistanceUnit := CNM_RecipeHandling.LengthUnit.METER,
+	expectedDistancePrefix:= CNM_RecipeHandling.MetricPrefixes.KILO,
+
+	expectedDurationUnit := CNM_RecipeHandling.DurationUnit.HOUR,
+	expectedDurationPrefix:= CNM_RecipeHandling.MetricPrefixes.NONE,
+	assertionShouldBeTrue := True
+);
+THIS^.testConvertVelocity(
+	sourceVelocityValue := 3600000.0,
+	
+	sourceUnit := CNM_RecipeHandling.LengthUnit.METER,
+	sourceDistancePrefix := CNM_RecipeHandling.MetricPrefixes.KILO,
+	
+	sourceDurationUnit := CNM_RecipeHandling.DurationUnit.HOUR,
+	sourceDurationPrefix := CNM_RecipeHandling.MetricPrefixes.NONE,
+	
+	expectedVelocityValue:= 1000000.0,
+
+	expectedDistanceUnit := CNM_RecipeHandling.LengthUnit.METER,
+	expectedDistancePrefix:= CNM_RecipeHandling.MetricPrefixes.NONE,
+
+	expectedDurationUnit := CNM_RecipeHandling.DurationUnit.SECONDS,
+	expectedDurationPrefix:= CNM_RecipeHandling.MetricPrefixes.NONE,
+	assertionShouldBeTrue := True
+);
+THIS^.testConvertVelocity(
+	sourceVelocityValue := 0.000000001,
+	
+	sourceUnit := CNM_RecipeHandling.LengthUnit.METER,
+	sourceDistancePrefix := CNM_RecipeHandling.MetricPrefixes.KILO,
+	
+	sourceDurationUnit := CNM_RecipeHandling.DurationUnit.HOUR,
+	sourceDurationPrefix := CNM_RecipeHandling.MetricPrefixes.NONE,
+	
+	expectedVelocityValue:= 0.0000000003599999999,
+
+	expectedDistanceUnit := CNM_RecipeHandling.LengthUnit.METER,
+	expectedDistancePrefix:= CNM_RecipeHandling.MetricPrefixes.NONE,
+
+	expectedDurationUnit := CNM_RecipeHandling.DurationUnit.SECONDS,
+	expectedDurationPrefix:= CNM_RecipeHandling.MetricPrefixes.NONE,
+	assertionShouldBeTrue := True
+);
+THIS^.testConvertVelocity(
+	sourceVelocityValue := -0.000000001,
+	
+	sourceUnit := CNM_RecipeHandling.LengthUnit.METER,
+	sourceDistancePrefix := CNM_RecipeHandling.MetricPrefixes.KILO,
+	
+	sourceDurationUnit := CNM_RecipeHandling.DurationUnit.HOUR,
+	sourceDurationPrefix := CNM_RecipeHandling.MetricPrefixes.NONE,
+	
+	expectedVelocityValue:= -0.0000000003599999999,
+
+	expectedDistanceUnit := CNM_RecipeHandling.LengthUnit.METER,
+	expectedDistancePrefix:= CNM_RecipeHandling.MetricPrefixes.NONE,
+
+	expectedDurationUnit := CNM_RecipeHandling.DurationUnit.SECONDS,
+	expectedDurationPrefix:= CNM_RecipeHandling.MetricPrefixes.NONE,
+	assertionShouldBeTrue := True
+);
+THIS^.testConvertVelocity(
+	sourceVelocityValue := 1.0,
+	
+	sourceUnit := CNM_RecipeHandling.LengthUnit.METER,
+	sourceDistancePrefix := CNM_RecipeHandling.MetricPrefixes.CENTI,
+	
+	sourceDurationUnit := CNM_RecipeHandling.DurationUnit.SECONDS,
+	sourceDurationPrefix := CNM_RecipeHandling.MetricPrefixes.MILLI,
+	
+	expectedVelocityValue:= 10.0,
+
+	expectedDistanceUnit := CNM_RecipeHandling.LengthUnit.METER,
+	expectedDistancePrefix:= CNM_RecipeHandling.MetricPrefixes.NONE,
+
+	expectedDurationUnit := CNM_RecipeHandling.DurationUnit.SECONDS,
+	expectedDurationPrefix:= CNM_RecipeHandling.MetricPrefixes.NONE,
+	assertionShouldBeTrue := True
+);
+THIS^.testConvertVelocity(
+	sourceVelocityValue := 5000.0,
+	
+	sourceUnit := CNM_RecipeHandling.LengthUnit.METER,
+	sourceDistancePrefix := CNM_RecipeHandling.MetricPrefixes.MICRO,
+	
+	sourceDurationUnit := CNM_RecipeHandling.DurationUnit.SECONDS,
+	sourceDurationPrefix := CNM_RecipeHandling.MetricPrefixes.NONE,
+	
+	expectedVelocityValue:= 0.005,
+
+	expectedDistanceUnit := CNM_RecipeHandling.LengthUnit.METER,
+	expectedDistancePrefix:= CNM_RecipeHandling.MetricPrefixes.NONE,
+
+	expectedDurationUnit := CNM_RecipeHandling.DurationUnit.SECONDS,
+	expectedDurationPrefix:= CNM_RecipeHandling.MetricPrefixes.NONE,
+	assertionShouldBeTrue := True
+);
+THIS^.testConvertVelocity(
+	sourceVelocityValue := 1.0,
+	
+	sourceUnit := CNM_RecipeHandling.LengthUnit.METER,
+	sourceDistancePrefix := CNM_RecipeHandling.MetricPrefixes.CENTI,
+	
+	sourceDurationUnit := CNM_RecipeHandling.DurationUnit.SECONDS,
+	sourceDurationPrefix := CNM_RecipeHandling.MetricPrefixes.MILLI,
+	
+	expectedVelocityValue:= 10.0,
+
+	expectedDistanceUnit := CNM_RecipeHandling.LengthUnit.METER,
+	expectedDistancePrefix:= CNM_RecipeHandling.MetricPrefixes.NONE,
+
+	expectedDurationUnit := CNM_RecipeHandling.DurationUnit.SECONDS,
+	expectedDurationPrefix:= CNM_RecipeHandling.MetricPrefixes.NONE,
+	assertionShouldBeTrue := True
+);
+THIS^.testConvertVelocity(
+	sourceVelocityValue := 2.0,
+	
+	sourceUnit := CNM_RecipeHandling.LengthUnit.METER,
+	sourceDistancePrefix := CNM_RecipeHandling.MetricPrefixes.KILO,
+	
+	sourceDurationUnit := CNM_RecipeHandling.DurationUnit.MINUTE,
+	sourceDurationPrefix := CNM_RecipeHandling.MetricPrefixes.NONE,
+	
+	expectedVelocityValue:= 33.33,
+
+	expectedDistanceUnit := CNM_RecipeHandling.LengthUnit.METER,
+	expectedDistancePrefix:= CNM_RecipeHandling.MetricPrefixes.NONE,
+
+	expectedDurationUnit := CNM_RecipeHandling.DurationUnit.SECONDS,
+	expectedDurationPrefix:= CNM_RecipeHandling.MetricPrefixes.NONE,
+	assertionShouldBeTrue := True
+);
+THIS^.testConvertVelocity(
+	sourceVelocityValue := 1.0,
+	
+	sourceUnit := CNM_RecipeHandling.LengthUnit.METER,
+	sourceDistancePrefix := CNM_RecipeHandling.MetricPrefixes.NANO,
+	
+	sourceDurationUnit := CNM_RecipeHandling.DurationUnit.SECONDS,
+	sourceDurationPrefix := CNM_RecipeHandling.MetricPrefixes.NANO,
+	
+	expectedVelocityValue:= 1.0,
+
+	expectedDistanceUnit := CNM_RecipeHandling.LengthUnit.METER,
+	expectedDistancePrefix:= CNM_RecipeHandling.MetricPrefixes.NONE,
+
+	expectedDurationUnit := CNM_RecipeHandling.DurationUnit.SECONDS,
+	expectedDurationPrefix:= CNM_RecipeHandling.MetricPrefixes.NONE,
+	assertionShouldBeTrue := True
+);
+THIS^.testConvertVelocity(
+	sourceVelocityValue := 1.0,
+	
+	sourceUnit := CNM_RecipeHandling.LengthUnit.METER,
+	sourceDistancePrefix := CNM_RecipeHandling.MetricPrefixes.MEGA,
+	
+	sourceDurationUnit := CNM_RecipeHandling.DurationUnit.HOUR,
+	sourceDurationPrefix := CNM_RecipeHandling.MetricPrefixes.NONE,
+	
+	expectedVelocityValue:= 277.777778,
+
+	expectedDistanceUnit := CNM_RecipeHandling.LengthUnit.METER,
+	expectedDistancePrefix:= CNM_RecipeHandling.MetricPrefixes.NONE,
+
+	expectedDurationUnit := CNM_RecipeHandling.DurationUnit.SECONDS,
+	expectedDurationPrefix:= CNM_RecipeHandling.MetricPrefixes.NONE,
+	assertionShouldBeTrue := True
+);
+THIS^.testConvertVelocity(
+	sourceVelocityValue := 1.0,
+	
+	sourceUnit := CNM_RecipeHandling.LengthUnit.METER,
+	sourceDistancePrefix := CNM_RecipeHandling.MetricPrefixes.MILLI,
+	
+	sourceDurationUnit := CNM_RecipeHandling.DurationUnit.SECONDS,
+	sourceDurationPrefix := CNM_RecipeHandling.MetricPrefixes.MICRO,
+	
+	expectedVelocityValue:= 1000.0,
+
+	expectedDistanceUnit := CNM_RecipeHandling.LengthUnit.METER,
+	expectedDistancePrefix:= CNM_RecipeHandling.MetricPrefixes.NONE,
+
+	expectedDurationUnit := CNM_RecipeHandling.DurationUnit.SECONDS,
+	expectedDurationPrefix:= CNM_RecipeHandling.MetricPrefixes.NONE,
+	assertionShouldBeTrue := True
+);
+THIS^.testConvertVelocity(
+	sourceVelocityValue := 10.0,
+	
+	sourceUnit := CNM_RecipeHandling.LengthUnit.METER,
+	sourceDistancePrefix := CNM_RecipeHandling.MetricPrefixes.PICO,
+	
+	sourceDurationUnit := CNM_RecipeHandling.DurationUnit.SECONDS,
+	sourceDurationPrefix := CNM_RecipeHandling.MetricPrefixes.NONE,
+	
+	expectedVelocityValue:= 0.00000000001,
+
+	expectedDistanceUnit := CNM_RecipeHandling.LengthUnit.METER,
+	expectedDistancePrefix:= CNM_RecipeHandling.MetricPrefixes.NONE,
+
+	expectedDurationUnit := CNM_RecipeHandling.DurationUnit.SECONDS,
+	expectedDurationPrefix:= CNM_RecipeHandling.MetricPrefixes.NONE,
+	assertionShouldBeTrue := True
+);
+THIS^.testConvertVelocity(
+	sourceVelocityValue := 100.0,
+	
+	sourceUnit := CNM_RecipeHandling.LengthUnit.METER,
+	sourceDistancePrefix := CNM_RecipeHandling.MetricPrefixes.MICRO,
+	
+	sourceDurationUnit := CNM_RecipeHandling.DurationUnit.SECONDS,
+	sourceDurationPrefix := CNM_RecipeHandling.MetricPrefixes.MILLI,
+	
+	expectedVelocityValue:= 0.1,
+
+	expectedDistanceUnit := CNM_RecipeHandling.LengthUnit.METER,
+	expectedDistancePrefix:= CNM_RecipeHandling.MetricPrefixes.NONE,
+
+	expectedDurationUnit := CNM_RecipeHandling.DurationUnit.SECONDS,
+	expectedDurationPrefix:= CNM_RecipeHandling.MetricPrefixes.NONE,
+	assertionShouldBeTrue := True
+);
+THIS^.testConvertVelocity(
+	sourceVelocityValue := 10000.0,
+	
+	sourceUnit := CNM_RecipeHandling.LengthUnit.METER,
+	sourceDistancePrefix := CNM_RecipeHandling.MetricPrefixes.NONE,
+	
+	sourceDurationUnit := CNM_RecipeHandling.DurationUnit.SECONDS,
+	sourceDurationPrefix := CNM_RecipeHandling.MetricPrefixes.NONE,
+	
+	expectedVelocityValue:= 0.01,
+
+	expectedDistanceUnit := CNM_RecipeHandling.LengthUnit.METER,
+	expectedDistancePrefix:= CNM_RecipeHandling.MetricPrefixes.KILO,
+
+	expectedDurationUnit := CNM_RecipeHandling.DurationUnit.SECONDS,
+	expectedDurationPrefix:= CNM_RecipeHandling.MetricPrefixes.MICRO,
+	assertionShouldBeTrue := True
+);
+THIS^.testConvertVelocity(
+	sourceVelocityValue := 	0.04167,
+	
+	sourceUnit := CNM_RecipeHandling.LengthUnit.METER,
+	sourceDistancePrefix := CNM_RecipeHandling.MetricPrefixes.NONE,
+	
+	sourceDurationUnit := CNM_RecipeHandling.DurationUnit.SECONDS,
+	sourceDurationPrefix := CNM_RecipeHandling.MetricPrefixes.NONE,
+	
+	expectedVelocityValue:= 250.02,
+
+	expectedDistanceUnit := CNM_RecipeHandling.LengthUnit.METER,
+	expectedDistancePrefix:= CNM_RecipeHandling.MetricPrefixes.CENTI,
+
+	expectedDurationUnit := CNM_RecipeHandling.DurationUnit.MINUTE,
+	expectedDurationPrefix:= CNM_RecipeHandling.MetricPrefixes.NONE,
+	assertionShouldBeTrue := True
+);
+THIS^.testConvertVelocity(
+	sourceVelocityValue := 	1.0,
+	
+	sourceUnit := CNM_RecipeHandling.LengthUnit.METER,
+	sourceDistancePrefix := CNM_RecipeHandling.MetricPrefixes.GIGA,
+	
+	sourceDurationUnit := CNM_RecipeHandling.DurationUnit.HOUR,
+	sourceDurationPrefix := CNM_RecipeHandling.MetricPrefixes.NONE,
+	
+	expectedVelocityValue:= 277.7777,
+
+	expectedDistanceUnit := CNM_RecipeHandling.LengthUnit.METER,
+	expectedDistancePrefix:= CNM_RecipeHandling.MetricPrefixes.KILO,
+
+	expectedDurationUnit := CNM_RecipeHandling.DurationUnit.SECONDS,
+	expectedDurationPrefix:= CNM_RecipeHandling.MetricPrefixes.NONE,
+	assertionShouldBeTrue := True
+);
+THIS^.testConvertVelocity(
+	sourceVelocityValue := THIS^.MINUS_ZERO,
+	
+	sourceUnit := CNM_RecipeHandling.LengthUnit.METER,
+	sourceDistancePrefix := CNM_RecipeHandling.MetricPrefixes.GIGA,
+	
+	sourceDurationUnit := CNM_RecipeHandling.DurationUnit.HOUR,
+	sourceDurationPrefix := CNM_RecipeHandling.MetricPrefixes.NONE,
+	
+	expectedVelocityValue:= THIS^.MINUS_ZERO,
+
+	expectedDistanceUnit := CNM_RecipeHandling.LengthUnit.METER,
+	expectedDistancePrefix:= CNM_RecipeHandling.MetricPrefixes.KILO,
+
+	expectedDurationUnit := CNM_RecipeHandling.DurationUnit.SECONDS,
+	expectedDurationPrefix:= CNM_RecipeHandling.MetricPrefixes.NONE,
+	assertionShouldBeTrue := True
+);
+THIS^.testConvertVelocity(
+	sourceVelocityValue := THIS^.MIN_SUBNORMAL,
+	
+	sourceUnit := CNM_RecipeHandling.LengthUnit.METER,
+	sourceDistancePrefix := CNM_RecipeHandling.MetricPrefixes.GIGA,
+	
+	sourceDurationUnit := CNM_RecipeHandling.DurationUnit.HOUR,
+	sourceDurationPrefix := CNM_RecipeHandling.MetricPrefixes.NONE,
+	
+	expectedVelocityValue:= THIS^.MIN_SUBNORMAL,
+
+	expectedDistanceUnit := CNM_RecipeHandling.LengthUnit.METER,
+	expectedDistancePrefix:= CNM_RecipeHandling.MetricPrefixes.KILO,
+
+	expectedDurationUnit := CNM_RecipeHandling.DurationUnit.SECONDS,
+	expectedDurationPrefix:= CNM_RecipeHandling.MetricPrefixes.NONE,
+	assertionShouldBeTrue := True
+);
+THIS^.testConvertVelocity(
+	sourceVelocityValue := THIS^.SMALLEST_NEGATIVE_SUBNORMAL,
+	
+	sourceUnit := CNM_RecipeHandling.LengthUnit.METER,
+	sourceDistancePrefix := CNM_RecipeHandling.MetricPrefixes.GIGA,
+	
+	sourceDurationUnit := CNM_RecipeHandling.DurationUnit.HOUR,
+	sourceDurationPrefix := CNM_RecipeHandling.MetricPrefixes.NONE,
+	
+	expectedVelocityValue:= THIS^.SMALLEST_NEGATIVE_SUBNORMAL,
+
+	expectedDistanceUnit := CNM_RecipeHandling.LengthUnit.METER,
+	expectedDistancePrefix:= CNM_RecipeHandling.MetricPrefixes.KILO,
+
+	expectedDurationUnit := CNM_RecipeHandling.DurationUnit.SECONDS,
+	expectedDurationPrefix:= CNM_RecipeHandling.MetricPrefixes.NONE,
+	assertionShouldBeTrue := True
+);
+THIS^.testConvertVelocity(
+	sourceVelocityValue := THIS^.SMALLEST_POSITIVE_SUBNORMAL,
+	
+	sourceUnit := CNM_RecipeHandling.LengthUnit.METER,
+	sourceDistancePrefix := CNM_RecipeHandling.MetricPrefixes.GIGA,
+	
+	sourceDurationUnit := CNM_RecipeHandling.DurationUnit.HOUR,
+	sourceDurationPrefix := CNM_RecipeHandling.MetricPrefixes.NONE,
+	
+	expectedVelocityValue:= THIS^.SMALLEST_POSITIVE_SUBNORMAL,
+
+	expectedDistanceUnit := CNM_RecipeHandling.LengthUnit.METER,
+	expectedDistancePrefix:= CNM_RecipeHandling.MetricPrefixes.KILO,
+
+	expectedDurationUnit := CNM_RecipeHandling.DurationUnit.SECONDS,
+	expectedDurationPrefix:= CNM_RecipeHandling.MetricPrefixes.NONE,
+	assertionShouldBeTrue := True
+);
+THIS^.testConvertVelocitySpecialCases(
+	sourceVelocityValue := THIS^.NAN,
+	
+	sourceUnit := CNM_RecipeHandling.LengthUnit.METER,
+	sourceDistancePrefix := CNM_RecipeHandling.MetricPrefixes.GIGA,
+	
+	sourceDurationUnit := CNM_RecipeHandling.DurationUnit.HOUR,
+	sourceDurationPrefix := CNM_RecipeHandling.MetricPrefixes.NONE,
+	
+	expectedVelocityValue:= THIS^.NAN,
+
+	expectedDistanceUnit := CNM_RecipeHandling.LengthUnit.METER,
+	expectedDistancePrefix:= CNM_RecipeHandling.MetricPrefixes.KILO,
+
+	expectedDurationUnit := CNM_RecipeHandling.DurationUnit.SECONDS,
+	expectedDurationPrefix:= CNM_RecipeHandling.MetricPrefixes.NONE
+);
+THIS^.testConvertVelocitySpecialCases(
+	sourceVelocityValue := THIS^.INF,
+	
+	sourceUnit := CNM_RecipeHandling.LengthUnit.METER,
+	sourceDistancePrefix := CNM_RecipeHandling.MetricPrefixes.GIGA,
+	
+	sourceDurationUnit := CNM_RecipeHandling.DurationUnit.HOUR,
+	sourceDurationPrefix := CNM_RecipeHandling.MetricPrefixes.NONE,
+	
+	expectedVelocityValue:= THIS^.INF,
+
+	expectedDistanceUnit := CNM_RecipeHandling.LengthUnit.METER,
+	expectedDistancePrefix:= CNM_RecipeHandling.MetricPrefixes.KILO,
+
+	expectedDurationUnit := CNM_RecipeHandling.DurationUnit.SECONDS,
+	expectedDurationPrefix:= CNM_RecipeHandling.MetricPrefixes.NONE
+);
+THIS^.testConvertVelocitySpecialCases(
+	sourceVelocityValue := THIS^.MINUS_INF,
+	
+	sourceUnit := CNM_RecipeHandling.LengthUnit.METER,
+	sourceDistancePrefix := CNM_RecipeHandling.MetricPrefixes.GIGA,
+	
+	sourceDurationUnit := CNM_RecipeHandling.DurationUnit.HOUR,
+	sourceDurationPrefix := CNM_RecipeHandling.MetricPrefixes.NONE,
+	
+	expectedVelocityValue:= THIS^.MINUS_INF,
+
+	expectedDistanceUnit := CNM_RecipeHandling.LengthUnit.METER,
+	expectedDistancePrefix:= CNM_RecipeHandling.MetricPrefixes.KILO,
+
+	expectedDurationUnit := CNM_RecipeHandling.DurationUnit.SECONDS,
+	expectedDurationPrefix:= CNM_RecipeHandling.MetricPrefixes.NONE
+);
+TcUnit.TEST_FINISHED();]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="runConvertVolume" Id="{aaa64b4a-0621-47e5-a346-985b6c462856}" FolderPath="ConvertVolume\">
+      <Declaration><![CDATA[(*
+
+short summary
+==================
+This test method tests ``ConvertVolume``
+method of CNM_RecipeHandling library with various inputs
+
+.. <legal notes>
+
+legal notes
+=================
+| SPDX-FileCopyrightText: © 2025 ekvip automation GmbH <info@ekvip.de>
+| SPDX-License-Identifier: Apache-2.0
+| For details check: Apache-2.0_
+
+.. _Apache-2.0: https://www.apache.org/licenses/LICENSE-2.0
+
+.. </legal notes>
+
+*)
+
+METHOD runConvertVolume
+VAR_INPUT
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[RETURN(NOT TcUnit.TEST_ORDERED('testConvertVolume'));
+
+THIS^.testConvertVolume(
+	sourceValue := 1.0,
+	sourceUnit := CNM_RecipeHandling.VolumeUnit.LITER,
+	sourcePrefix := CNM_RecipeHandling.MetricPrefixes.NONE,
+	expectedValue := 1000.0,
+	expectedUnit := CNM_RecipeHandling.VolumeUnit.LITER,
+	expectedPrefix:= CNM_RecipeHandling.MetricPrefixes.MILLI
+);
+THIS^.testConvertVolume(
+	sourceValue := 1.0,
+	sourceUnit := CNM_RecipeHandling.VolumeUnit.LITER,
+	sourcePrefix := CNM_RecipeHandling.MetricPrefixes.NONE,
+	expectedValue := 0.001,
+	expectedUnit := CNM_RecipeHandling.VolumeUnit.CUBIC_METER,
+	expectedPrefix:= CNM_RecipeHandling.MetricPrefixes.NONE
+);
+THIS^.testConvertVolume(
+	sourceValue := 1.0,
+	sourceUnit := CNM_RecipeHandling.VolumeUnit.LITER,
+	sourcePrefix := CNM_RecipeHandling.MetricPrefixes.NONE,
+	expectedValue := 0.264172 ,
+	expectedUnit := CNM_RecipeHandling.VolumeUnit.US_GALLON,
+	expectedPrefix:= CNM_RecipeHandling.MetricPrefixes.NONE
+);
+THIS^.testConvertVolume(
+	sourceValue := 1.0,
+	sourceUnit := CNM_RecipeHandling.VolumeUnit.LITER,
+	sourcePrefix := CNM_RecipeHandling.MetricPrefixes.NONE,
+	expectedValue := 0.219969 ,
+	expectedUnit := CNM_RecipeHandling.VolumeUnit.US_DRY_GALLON,
+	expectedPrefix:= CNM_RecipeHandling.MetricPrefixes.NONE
+);
+THIS^.testConvertVolume(
+	sourceValue := 1.0,
+	sourceUnit := CNM_RecipeHandling.VolumeUnit.LITER,
+	sourcePrefix := CNM_RecipeHandling.MetricPrefixes.NONE,
+	expectedValue := 1.8161708314990030466 ,
+	expectedUnit := CNM_RecipeHandling.VolumeUnit.US_DRY_PINT,
+	expectedPrefix:= CNM_RecipeHandling.MetricPrefixes.NONE
+);
+THIS^.testConvertVolume(
+	sourceValue := 1.0,
+	sourceUnit := CNM_RecipeHandling.VolumeUnit.US_DRY_PINT,
+	sourcePrefix := CNM_RecipeHandling.MetricPrefixes.NONE,
+	expectedValue :=  1.16365 ,
+	expectedUnit := CNM_RecipeHandling.VolumeUnit.US_PINT,
+	expectedPrefix:= CNM_RecipeHandling.MetricPrefixes.NONE
+);
+THIS^.testConvertVolume(
+	sourceValue := 1.0,
+	sourceUnit := CNM_RecipeHandling.VolumeUnit.LITER,
+	sourcePrefix := CNM_RecipeHandling.MetricPrefixes.NONE,
+	expectedValue :=  0.00130795,
+	expectedUnit := CNM_RecipeHandling.VolumeUnit.US_CUBIC_YARD,
+	expectedPrefix:= CNM_RecipeHandling.MetricPrefixes.NONE
+);
+THIS^.testConvertVolume(
+	sourceValue := 1.0,
+	sourceUnit := CNM_RecipeHandling.VolumeUnit.LITER,
+	sourcePrefix := CNM_RecipeHandling.MetricPrefixes.NONE,
+	expectedValue :=  0.03531467,
+	expectedUnit := CNM_RecipeHandling.VolumeUnit.US_CUBIC_FOOT,
+	expectedPrefix:= CNM_RecipeHandling.MetricPrefixes.NONE
+);
+THIS^.testConvertVolume(
+	sourceValue := 0.0,
+	sourceUnit := CNM_RecipeHandling.VolumeUnit.LITER,
+	sourcePrefix := CNM_RecipeHandling.MetricPrefixes.NONE,
+	expectedValue :=  0.0,
+	expectedUnit := CNM_RecipeHandling.VolumeUnit.LITER,
+	expectedPrefix:= CNM_RecipeHandling.MetricPrefixes.MILLI
+);
+THIS^.testConvertVolume(
+	sourceValue := 0.0,
+	sourceUnit := CNM_RecipeHandling.VolumeUnit.LITER,
+	sourcePrefix := CNM_RecipeHandling.MetricPrefixes.NONE,
+	expectedValue :=  0.0,
+	expectedUnit := CNM_RecipeHandling.VolumeUnit.US_GALLON,
+	expectedPrefix:= CNM_RecipeHandling.MetricPrefixes.MILLI
+);
+THIS^.testConvertVolume(
+	sourceValue := 0.0,
+	sourceUnit := CNM_RecipeHandling.VolumeUnit.LITER,
+	sourcePrefix := CNM_RecipeHandling.MetricPrefixes.NONE,
+	expectedValue :=  0.0,
+	expectedUnit := CNM_RecipeHandling.VolumeUnit.US_DRY_GALLON,
+	expectedPrefix:= CNM_RecipeHandling.MetricPrefixes.MILLI
+);
+THIS^.testConvertVolume(
+	sourceValue := 1000.0,
+	sourceUnit := CNM_RecipeHandling.VolumeUnit.LITER,
+	sourcePrefix := CNM_RecipeHandling.MetricPrefixes.NONE,
+	expectedValue :=  1000000.0,
+	expectedUnit := CNM_RecipeHandling.VolumeUnit.LITER,
+	expectedPrefix:= CNM_RecipeHandling.MetricPrefixes.MILLI
+);
+THIS^.testConvertVolume(
+	sourceValue := 1000.0,
+	sourceUnit := CNM_RecipeHandling.VolumeUnit.LITER,
+	sourcePrefix := CNM_RecipeHandling.MetricPrefixes.NONE,
+	expectedValue :=  1.0,
+	expectedUnit := CNM_RecipeHandling.VolumeUnit.CUBIC_METER,
+	expectedPrefix:= CNM_RecipeHandling.MetricPrefixes.NONE
+);
+THIS^.testConvertVolume(
+	sourceValue := 1000.0,
+	sourceUnit := CNM_RecipeHandling.VolumeUnit.LITER,
+	sourcePrefix := CNM_RecipeHandling.MetricPrefixes.NONE,
+	expectedValue := 264.172,
+	expectedUnit := CNM_RecipeHandling.VolumeUnit.US_GALLON,
+	expectedPrefix:= CNM_RecipeHandling.MetricPrefixes.NONE
+);
+THIS^.testConvertVolume(
+	sourceValue := 1000.0,
+	sourceUnit := CNM_RecipeHandling.VolumeUnit.LITER,
+	sourcePrefix := CNM_RecipeHandling.MetricPrefixes.NONE,
+	expectedValue := 227.020746,
+	expectedUnit := CNM_RecipeHandling.VolumeUnit.US_DRY_GALLON,
+	expectedPrefix:= CNM_RecipeHandling.MetricPrefixes.NONE
+);
+THIS^.testConvertVolume(
+	sourceValue := -1.0,
+	sourceUnit := CNM_RecipeHandling.VolumeUnit.LITER,
+	sourcePrefix := CNM_RecipeHandling.MetricPrefixes.NONE,
+	expectedValue := -1000.0,
+	expectedUnit := CNM_RecipeHandling.VolumeUnit.LITER,
+	expectedPrefix:= CNM_RecipeHandling.MetricPrefixes.MILLI
+);
+THIS^.testConvertVolume(
+	sourceValue := -1.0,
+	sourceUnit := CNM_RecipeHandling.VolumeUnit.LITER,
+	sourcePrefix := CNM_RecipeHandling.MetricPrefixes.NONE,
+	expectedValue := -0.264172,
+	expectedUnit := CNM_RecipeHandling.VolumeUnit.US_GALLON,
+	expectedPrefix:= CNM_RecipeHandling.MetricPrefixes.NONE
+);
+THIS^.testConvertVolume(
+	sourceValue := 1.0,
+	sourceUnit := CNM_RecipeHandling.VolumeUnit.LITER,
+	sourcePrefix := CNM_RecipeHandling.MetricPrefixes.KILO,
+	expectedValue := 0.26417205,
+	expectedUnit := CNM_RecipeHandling.VolumeUnit.US_GALLON,
+	expectedPrefix:= CNM_RecipeHandling.MetricPrefixes.KILO
+);
+THIS^.testConvertVolume(
+	sourceValue := 1.0,
+	sourceUnit := CNM_RecipeHandling.VolumeUnit.CUBIC_METER,
+	sourcePrefix := CNM_RecipeHandling.MetricPrefixes.NONE,
+	expectedValue := 6.28981,
+	expectedUnit := CNM_RecipeHandling.VolumeUnit.US_OIL_BARREL,
+	expectedPrefix:= CNM_RecipeHandling.MetricPrefixes.NONE
+);
+THIS^.testConvertVolume(
+	sourceValue := 1.0,
+	sourceUnit := CNM_RecipeHandling.VolumeUnit.CUBIC_METER,
+	sourcePrefix := CNM_RecipeHandling.MetricPrefixes.KILO,
+	expectedValue := 6289810771.5398332750,
+	expectedUnit := CNM_RecipeHandling.VolumeUnit.US_OIL_BARREL,
+	expectedPrefix:= CNM_RecipeHandling.MetricPrefixes.NONE
+);
+THIS^.testConvertVolume(
+	sourceValue := 3.14,
+	sourceUnit := CNM_RecipeHandling.VolumeUnit.CUBIC_METER,
+	sourcePrefix := CNM_RecipeHandling.MetricPrefixes.NONE,
+	expectedValue := 19.75,
+	expectedUnit := CNM_RecipeHandling.VolumeUnit.US_OIL_BARREL,
+	expectedPrefix:= CNM_RecipeHandling.MetricPrefixes.NONE
+);
+THIS^.testConvertVolume(
+	sourceValue := 1.41,
+	sourceUnit := CNM_RecipeHandling.VolumeUnit.LITER,
+	sourcePrefix := CNM_RecipeHandling.MetricPrefixes.NONE,
+	expectedValue := 0.0088937924,
+	expectedUnit := CNM_RecipeHandling.VolumeUnit.US_OIL_BARREL,
+	expectedPrefix:= CNM_RecipeHandling.MetricPrefixes.NONE
+);
+THIS^.testConvertVolume(
+	sourceValue := 1.0,
+	sourceUnit := CNM_RecipeHandling.VolumeUnit.US_OIL_BARREL,
+	sourcePrefix := CNM_RecipeHandling.MetricPrefixes.NONE,
+	expectedValue := 0.1589872949,
+	expectedUnit := CNM_RecipeHandling.VolumeUnit.CUBIC_METER,
+	expectedPrefix:= CNM_RecipeHandling.MetricPrefixes.NONE
+);
+THIS^.testConvertVolume(
+	sourceValue := 3.14,
+	sourceUnit := CNM_RecipeHandling.VolumeUnit.US_OIL_BARREL,
+	sourcePrefix := CNM_RecipeHandling.MetricPrefixes.NONE,
+	expectedValue := 16880.6289,
+	expectedUnit := CNM_RecipeHandling.VolumeUnit.US_FLUID_OUNCE,
+	expectedPrefix:= CNM_RecipeHandling.MetricPrefixes.NONE
+);
+THIS^.testConvertVolume(
+	sourceValue := THIS^.MINUS_ZERO,
+	sourceUnit := CNM_RecipeHandling.VolumeUnit.LITER,
+	sourcePrefix := CNM_RecipeHandling.MetricPrefixes.KILO,
+	expectedValue := THIS^.MINUS_ZERO,
+	expectedUnit := CNM_RecipeHandling.VolumeUnit.US_GALLON,
+	expectedPrefix:= CNM_RecipeHandling.MetricPrefixes.KILO
+);
+THIS^.testConvertVolume(
+	sourceValue := THIS^.MIN_SUBNORMAL,
+	sourceUnit := CNM_RecipeHandling.VolumeUnit.LITER,
+	sourcePrefix := CNM_RecipeHandling.MetricPrefixes.KILO,
+	expectedValue := THIS^.MIN_SUBNORMAL,
+	expectedUnit := CNM_RecipeHandling.VolumeUnit.US_GALLON,
+	expectedPrefix:= CNM_RecipeHandling.MetricPrefixes.KILO
+);
+THIS^.testConvertVolume(
+	sourceValue := THIS^.MAX_SUBNORMAL,
+	sourceUnit := CNM_RecipeHandling.VolumeUnit.LITER,
+	sourcePrefix := CNM_RecipeHandling.MetricPrefixes.KILO,
+	expectedValue := THIS^.MAX_SUBNORMAL,
+	expectedUnit := CNM_RecipeHandling.VolumeUnit.US_GALLON,
+	expectedPrefix:= CNM_RecipeHandling.MetricPrefixes.KILO
+);
+THIS^.testConvertVolume(
+	sourceValue := THIS^.SMALLEST_NEGATIVE_SUBNORMAL,
+	sourceUnit := CNM_RecipeHandling.VolumeUnit.LITER,
+	sourcePrefix := CNM_RecipeHandling.MetricPrefixes.KILO,
+	expectedValue := THIS^.SMALLEST_NEGATIVE_SUBNORMAL,
+	expectedUnit := CNM_RecipeHandling.VolumeUnit.US_GALLON,
+	expectedPrefix:= CNM_RecipeHandling.MetricPrefixes.KILO
+);
+THIS^.testConvertVolume(
+	sourceValue := THIS^.SMALLEST_POSITIVE_SUBNORMAL,
+	sourceUnit := CNM_RecipeHandling.VolumeUnit.LITER,
+	sourcePrefix := CNM_RecipeHandling.MetricPrefixes.KILO,
+	expectedValue := THIS^.SMALLEST_POSITIVE_SUBNORMAL,
+	expectedUnit := CNM_RecipeHandling.VolumeUnit.US_GALLON,
+	expectedPrefix:= CNM_RecipeHandling.MetricPrefixes.KILO
+);
+THIS^.testConvertVolumeSpecialCases(
+	sourceValue := THIS^.NAN,
+	sourceUnit := CNM_RecipeHandling.VolumeUnit.LITER,
+	sourcePrefix := CNM_RecipeHandling.MetricPrefixes.KILO,
+	expectedValue := THIS^.NAN,
+	expectedUnit := CNM_RecipeHandling.VolumeUnit.US_GALLON,
+	expectedPrefix:= CNM_RecipeHandling.MetricPrefixes.KILO
+);
+THIS^.testConvertVolumeSpecialCases(
+	sourceValue := THIS^.INF,
+	sourceUnit := CNM_RecipeHandling.VolumeUnit.LITER,
+	sourcePrefix := CNM_RecipeHandling.MetricPrefixes.KILO,
+	expectedValue := THIS^.INF,
+	expectedUnit := CNM_RecipeHandling.VolumeUnit.US_GALLON,
+	expectedPrefix:= CNM_RecipeHandling.MetricPrefixes.KILO
+);
+THIS^.testConvertVolumeSpecialCases(
+	sourceValue := THIS^.MINUS_INF,
+	sourceUnit := CNM_RecipeHandling.VolumeUnit.LITER,
+	sourcePrefix := CNM_RecipeHandling.MetricPrefixes.KILO,
+	expectedValue := THIS^.MINUS_INF,
+	expectedUnit := CNM_RecipeHandling.VolumeUnit.US_GALLON,
+	expectedPrefix:= CNM_RecipeHandling.MetricPrefixes.KILO
+);
+TcUnit.TEST_FINISHED();
+]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="runConvertWeight" Id="{2f5ab414-5d2c-4305-8e77-ef13aae4642e}" FolderPath="ConvertWeight\">
+      <Declaration><![CDATA[(*
+
+short summary
+==================
+This test method tests ``ConvertWeight``
+method of CNM_RecipeHandling library with various inputs
+
+.. <legal notes>
+
+legal notes
+=================
+| SPDX-FileCopyrightText: © 2025 ekvip automation GmbH <info@ekvip.de>
+| SPDX-License-Identifier: Apache-2.0
+| For details check: Apache-2.0_
+
+.. _Apache-2.0: https://www.apache.org/licenses/LICENSE-2.0
+
+.. </legal notes>
+
+*)
+
+METHOD runConvertWeight
+VAR_INPUT
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[RETURN(NOT TcUnit.TEST_ORDERED('testConvertWeight'));
+
+THIS^.testConvertWeight(
+	sourceWeightValue := 1.0,
+	sourceWeightUnit := CNM_RecipeHandling.WeightUnit.GRAM,
+	sourcePrefix := CNM_RecipeHandling.MetricPrefixes.NONE,
+	expectedValue := 1.0,
+	expectedUnit := CNM_RecipeHandling.WeightUnit.GRAM,
+	expectedPrefix:= CNM_RecipeHandling.MetricPrefixes.NONE
+);
+THIS^.testConvertWeight(
+	sourceWeightValue := 1.0,
+	sourceWeightUnit := CNM_RecipeHandling.WeightUnit.GRAM,
+	sourcePrefix := CNM_RecipeHandling.MetricPrefixes.KILO,
+	expectedValue := 1000.0,
+	expectedUnit := CNM_RecipeHandling.WeightUnit.GRAM,
+	expectedPrefix:= CNM_RecipeHandling.MetricPrefixes.NONE
+);
+THIS^.testConvertWeight(
+	sourceWeightValue := 1.0,
+	sourceWeightUnit := CNM_RecipeHandling.WeightUnit.GRAM,
+	sourcePrefix := CNM_RecipeHandling.MetricPrefixes.KILO,
+	expectedValue := 1000.0,
+	expectedUnit := CNM_RecipeHandling.WeightUnit.GRAM,
+	expectedPrefix:= CNM_RecipeHandling.MetricPrefixes.NONE
+);
+THIS^.testConvertWeight(
+	sourceWeightValue := 1.0,
+	sourceWeightUnit := CNM_RecipeHandling.WeightUnit.GRAM,
+	sourcePrefix := CNM_RecipeHandling.MetricPrefixes.KILO,
+	expectedValue := 0.001,
+	expectedUnit := CNM_RecipeHandling.WeightUnit.TON,
+	expectedPrefix:= CNM_RecipeHandling.MetricPrefixes.NONE
+);
+THIS^.testConvertWeight(
+	sourceWeightValue := 0.001,
+	sourceWeightUnit := CNM_RecipeHandling.WeightUnit.TON,
+	sourcePrefix := CNM_RecipeHandling.MetricPrefixes.NONE,
+	expectedValue := 2.20462,
+	expectedUnit := CNM_RecipeHandling.WeightUnit.US_POUND,
+	expectedPrefix:= CNM_RecipeHandling.MetricPrefixes.NONE
+);
+THIS^.testConvertWeight(
+	sourceWeightValue := 1.0,
+	sourceWeightUnit := CNM_RecipeHandling.WeightUnit.GRAM,
+	sourcePrefix := CNM_RecipeHandling.MetricPrefixes.KILO,
+	expectedValue := 35.274,
+	expectedUnit := CNM_RecipeHandling.WeightUnit.US_OUNCE,
+	expectedPrefix:= CNM_RecipeHandling.MetricPrefixes.NONE
+);
+THIS^.testConvertWeight(
+	sourceWeightValue := 1.0,
+	sourceWeightUnit := CNM_RecipeHandling.WeightUnit.GRAM,
+	sourcePrefix := CNM_RecipeHandling.MetricPrefixes.NONE,
+	expectedValue := 1000,
+	expectedUnit := CNM_RecipeHandling.WeightUnit.GRAM,
+	expectedPrefix:= CNM_RecipeHandling.MetricPrefixes.MILLI
+);
+THIS^.testConvertWeight(
+	sourceWeightValue := 1.0,
+	sourceWeightUnit := CNM_RecipeHandling.WeightUnit.GRAM,
+	sourcePrefix := CNM_RecipeHandling.MetricPrefixes.NONE,
+	expectedValue := 0.00220462,
+	expectedUnit := CNM_RecipeHandling.WeightUnit.US_POUND,
+	expectedPrefix:= CNM_RecipeHandling.MetricPrefixes.NONE
+);
+THIS^.testConvertWeight(
+	sourceWeightValue := 1.0,
+	sourceWeightUnit := CNM_RecipeHandling.WeightUnit.GRAM,
+	sourcePrefix := CNM_RecipeHandling.MetricPrefixes.NONE,
+	expectedValue := 0.035274,
+	expectedUnit := CNM_RecipeHandling.WeightUnit.US_OUNCE,
+	expectedPrefix:= CNM_RecipeHandling.MetricPrefixes.NONE
+);
+THIS^.testConvertWeight(
+	sourceWeightValue := 0.0,
+	sourceWeightUnit := CNM_RecipeHandling.WeightUnit.GRAM,
+	sourcePrefix := CNM_RecipeHandling.MetricPrefixes.KILO,
+	expectedValue := 0.0,
+	expectedUnit := CNM_RecipeHandling.WeightUnit.GRAM,
+	expectedPrefix:= CNM_RecipeHandling.MetricPrefixes.NONE
+);
+THIS^.testConvertWeight(
+	sourceWeightValue := 0.0,
+	sourceWeightUnit := CNM_RecipeHandling.WeightUnit.GRAM,
+	sourcePrefix := CNM_RecipeHandling.MetricPrefixes.KILO,
+	expectedValue := 0.0,
+	expectedUnit := CNM_RecipeHandling.WeightUnit.US_POUND,
+	expectedPrefix:= CNM_RecipeHandling.MetricPrefixes.NONE
+);
+THIS^.testConvertWeight(
+	sourceWeightValue := 1000.0,
+	sourceWeightUnit := CNM_RecipeHandling.WeightUnit.GRAM,
+	sourcePrefix := CNM_RecipeHandling.MetricPrefixes.KILO,
+	expectedValue := 1.0,
+	expectedUnit := CNM_RecipeHandling.WeightUnit.TON,
+	expectedPrefix:= CNM_RecipeHandling.MetricPrefixes.NONE
+);
+THIS^.testConvertWeight(
+	sourceWeightValue := 1000.0,
+	sourceWeightUnit := CNM_RecipeHandling.WeightUnit.GRAM,
+	sourcePrefix := CNM_RecipeHandling.MetricPrefixes.KILO,
+	expectedValue := 2204.62,
+	expectedUnit := CNM_RecipeHandling.WeightUnit.US_POUND,
+	expectedPrefix:= CNM_RecipeHandling.MetricPrefixes.NONE
+);
+THIS^.testConvertWeight(
+	sourceWeightValue := 1000.0,
+	sourceWeightUnit := CNM_RecipeHandling.WeightUnit.GRAM,
+	sourcePrefix := CNM_RecipeHandling.MetricPrefixes.KILO,
+	expectedValue := 35273.96195,
+	expectedUnit := CNM_RecipeHandling.WeightUnit.US_OUNCE,
+	expectedPrefix:= CNM_RecipeHandling.MetricPrefixes.NONE
+);
+THIS^.testConvertWeight(
+	sourceWeightValue := -1.0,
+	sourceWeightUnit := CNM_RecipeHandling.WeightUnit.GRAM,
+	sourcePrefix := CNM_RecipeHandling.MetricPrefixes.KILO,
+	expectedValue := -1000,
+	expectedUnit := CNM_RecipeHandling.WeightUnit.GRAM,
+	expectedPrefix:= CNM_RecipeHandling.MetricPrefixes.NONE
+);
+THIS^.testConvertWeight(
+	sourceWeightValue := -1.0,
+	sourceWeightUnit := CNM_RecipeHandling.WeightUnit.GRAM,
+	sourcePrefix := CNM_RecipeHandling.MetricPrefixes.KILO,
+	expectedValue := -35.274,
+	expectedUnit := CNM_RecipeHandling.WeightUnit.US_OUNCE,
+	expectedPrefix:= CNM_RecipeHandling.MetricPrefixes.NONE
+);
+THIS^.testConvertWeight(
+	sourceWeightValue := 1.0,
+	sourceWeightUnit := CNM_RecipeHandling.WeightUnit.GRAM,
+	sourcePrefix := CNM_RecipeHandling.MetricPrefixes.MEGA,
+	expectedValue := 1000.0,
+	expectedUnit := CNM_RecipeHandling.WeightUnit.GRAM,
+	expectedPrefix:= CNM_RecipeHandling.MetricPrefixes.KILO
+);
+THIS^.testConvertWeight(
+	sourceWeightValue := 1.0,
+	sourceWeightUnit := CNM_RecipeHandling.WeightUnit.GRAM,
+	sourcePrefix := CNM_RecipeHandling.MetricPrefixes.HECTO,
+	expectedValue := 100.0,
+	expectedUnit := CNM_RecipeHandling.WeightUnit.GRAM,
+	expectedPrefix:= CNM_RecipeHandling.MetricPrefixes.NONE
+);
+THIS^.testConvertWeight(
+	sourceWeightValue := 1.0,
+	sourceWeightUnit := CNM_RecipeHandling.WeightUnit.GRAM,
+	sourcePrefix := CNM_RecipeHandling.MetricPrefixes.DEKA,
+	expectedValue := 10.0,
+	expectedUnit := CNM_RecipeHandling.WeightUnit.GRAM,
+	expectedPrefix:= CNM_RecipeHandling.MetricPrefixes.NONE
+);
+THIS^.testConvertWeight(
+	sourceWeightValue := 1.0,
+	sourceWeightUnit := CNM_RecipeHandling.WeightUnit.GRAM,
+	sourcePrefix := CNM_RecipeHandling.MetricPrefixes.DECI,
+	expectedValue := 0.1,
+	expectedUnit := CNM_RecipeHandling.WeightUnit.GRAM,
+	expectedPrefix:= CNM_RecipeHandling.MetricPrefixes.NONE
+);
+THIS^.testConvertWeight(
+	sourceWeightValue := 1.0,
+	sourceWeightUnit := CNM_RecipeHandling.WeightUnit.GRAM,
+	sourcePrefix := CNM_RecipeHandling.MetricPrefixes.CENTI,
+	expectedValue := 0.01,
+	expectedUnit := CNM_RecipeHandling.WeightUnit.GRAM,
+	expectedPrefix:= CNM_RecipeHandling.MetricPrefixes.NONE
+);
+THIS^.testConvertWeight(
+	sourceWeightValue := 1.0,
+	sourceWeightUnit := CNM_RecipeHandling.WeightUnit.GRAM,
+	sourcePrefix := CNM_RecipeHandling.MetricPrefixes.KILO,
+	expectedValue := 0.03527396,
+	expectedUnit := CNM_RecipeHandling.WeightUnit.US_OUNCE,
+	expectedPrefix:= CNM_RecipeHandling.MetricPrefixes.KILO
+);
+THIS^.testConvertWeight(
+	sourceWeightValue := THIS^.MINUS_ZERO,
+	sourceWeightUnit := CNM_RecipeHandling.WeightUnit.GRAM,
+	sourcePrefix := CNM_RecipeHandling.MetricPrefixes.KILO,
+	expectedValue := THIS^.MINUS_ZERO,
+	expectedUnit := CNM_RecipeHandling.WeightUnit.GRAM,
+	expectedPrefix:= CNM_RecipeHandling.MetricPrefixes.MILLI
+);
+THIS^.testConvertWeight(
+	sourceWeightValue := THIS^.MIN_SUBNORMAL,
+	sourceWeightUnit := CNM_RecipeHandling.WeightUnit.GRAM,
+	sourcePrefix := CNM_RecipeHandling.MetricPrefixes.KILO,
+	expectedValue := THIS^.MIN_SUBNORMAL,
+	expectedUnit := CNM_RecipeHandling.WeightUnit.GRAM,
+	expectedPrefix:= CNM_RecipeHandling.MetricPrefixes.MILLI
+);
+THIS^.testConvertWeight(
+	sourceWeightValue := THIS^.MAX_SUBNORMAL,
+	sourceWeightUnit := CNM_RecipeHandling.WeightUnit.GRAM,
+	sourcePrefix := CNM_RecipeHandling.MetricPrefixes.KILO,
+	expectedValue := THIS^.MAX_SUBNORMAL,
+	expectedUnit := CNM_RecipeHandling.WeightUnit.GRAM,
+	expectedPrefix:= CNM_RecipeHandling.MetricPrefixes.MILLI
+);
+THIS^.testConvertWeight(
+	sourceWeightValue := THIS^.SMALLEST_NEGATIVE_SUBNORMAL,
+	sourceWeightUnit := CNM_RecipeHandling.WeightUnit.GRAM,
+	sourcePrefix := CNM_RecipeHandling.MetricPrefixes.KILO,
+	expectedValue := THIS^.SMALLEST_NEGATIVE_SUBNORMAL,
+	expectedUnit := CNM_RecipeHandling.WeightUnit.GRAM,
+	expectedPrefix:= CNM_RecipeHandling.MetricPrefixes.MILLI
+);
+THIS^.testConvertWeight(
+	sourceWeightValue := THIS^.SMALLEST_POSITIVE_SUBNORMAL,
+	sourceWeightUnit := CNM_RecipeHandling.WeightUnit.GRAM,
+	sourcePrefix := CNM_RecipeHandling.MetricPrefixes.KILO,
+	expectedValue := THIS^.SMALLEST_POSITIVE_SUBNORMAL,
+	expectedUnit := CNM_RecipeHandling.WeightUnit.GRAM,
+	expectedPrefix:= CNM_RecipeHandling.MetricPrefixes.MILLI
+);
+THIS^.testConvertWightSpecialCases(
+	sourceWeightValue := THIS^.NAN,
+	sourceWeightUnit := CNM_RecipeHandling.WeightUnit.GRAM,
+	sourcePrefix := CNM_RecipeHandling.MetricPrefixes.KILO,
+	expectedValue := THIS^.NAN,
+	expectedUnit := CNM_RecipeHandling.WeightUnit.GRAM,
+	expectedPrefix:= CNM_RecipeHandling.MetricPrefixes.MILLI
+);
+THIS^.testConvertWightSpecialCases(
+	sourceWeightValue := THIS^.INF,
+	sourceWeightUnit := CNM_RecipeHandling.WeightUnit.GRAM,
+	sourcePrefix := CNM_RecipeHandling.MetricPrefixes.KILO,
+	expectedValue := THIS^.INF,
+	expectedUnit := CNM_RecipeHandling.WeightUnit.GRAM,
+	expectedPrefix:= CNM_RecipeHandling.MetricPrefixes.MILLI
+);
+THIS^.testConvertWightSpecialCases(
+	sourceWeightValue := THIS^.MINUS_INF,
+	sourceWeightUnit := CNM_RecipeHandling.WeightUnit.GRAM,
+	sourcePrefix := CNM_RecipeHandling.MetricPrefixes.KILO,
+	expectedValue := THIS^.MINUS_INF,
+	expectedUnit := CNM_RecipeHandling.WeightUnit.GRAM,
+	expectedPrefix:= CNM_RecipeHandling.MetricPrefixes.MILLI
+);
+TcUnit.TEST_FINISHED();	]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="runFastPow10" Id="{646518b8-ec47-4702-9e02-bfe694a4c4e9}" FolderPath="FastPow10\">
+      <Declaration><![CDATA[(*
+
+short summary
+==================
+This test method tests ``FastPow10``
+method of CNM_RecipeHandling library with various inputs
+
+.. <legal notes>
+
+legal notes
+=================
+| SPDX-FileCopyrightText: © 2025 ekvip automation GmbH <info@ekvip.de>
+| SPDX-License-Identifier: Apache-2.0
+| For details check: Apache-2.0_
+
+.. _Apache-2.0: https://www.apache.org/licenses/LICENSE-2.0
+
+.. </legal notes>
+
+*)
+
+METHOD runFastPow10
+VAR_INPUT
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[RETURN(NOT TcUnit.TEST_ORDERED('testFastPow10'));
+THIS^.testFastPow10(
+	exponentValue := 32,
+	expectedFastPow10Value := 100000000000000000000000000000000.0
+);
+THIS^.testFastPow10(
+	exponentValue := -5,
+	expectedFastPow10Value := 0.00001
+);
+THIS^.testFastPow10(
+	exponentValue := -3,
+	expectedFastPow10Value := 0.001
+);
+THIS^.testFastPow10(
+	exponentValue := -1, 
+	expectedFastPow10Value := 0.1
+);
+THIS^.testFastPow10(
+	exponentValue := 0,
+	expectedFastPow10Value := 1.0
+);
+THIS^.testFastPow10(
+	exponentValue := 1,
+	expectedFastPow10Value := 10.0
+);
+THIS^.testFastPow10(
+	exponentValue := 2, 
+	expectedFastPow10Value := 100.0
+);
+THIS^.testFastPow10(
+	exponentValue := 3, 
+	expectedFastPow10Value := 1000.0
+);
+THIS^.testFastPow10(
+	exponentValue := 6, 
+	expectedFastPow10Value := 1000000.0
+);
+THIS^.testFastPow10(
+	exponentValue := 9, 
+	expectedFastPow10Value := 1000000000.0
+);
+THIS^.testFastPow10(
+	exponentValue := 12, 
+	expectedFastPow10Value := 1000000000000.0
+);
+THIS^.testFastPow10(
+	exponentValue := -6, 
+	expectedFastPow10Value := 0.000001
+);
+THIS^.testFastPow10(
+	exponentValue := -9, 
+	expectedFastPow10Value := 0.000000001
+);
+THIS^.testFastPow10(
+	exponentValue := -12,
+	expectedFastPow10Value := 0.000000000001
+);
+THIS^.testFastPow10(
+	exponentValue := 15, 
+	expectedFastPow10Value := 1000000000000000.0
+);
+THIS^.testFastPow10(
+	exponentValue := -15, 
+	expectedFastPow10Value := 0.000000000000001
+);
+THIS^.testFastPow10(
+	exponentValue := 0,
+	expectedFastPow10Value := 1.0
+);
+TcUnit.TEST_FINISHED();	]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="testCalculateVelocity" Id="{83792ddf-8ef0-4a79-8eff-aad0b0c22c39}" FolderPath="CalculateVelocity\">
+      <Declaration><![CDATA[(*
+
+short summary
+==================
+This test method tests ``CalculateVelocity``
+method of CNM_RecipeHandling library, 
+it provides the possibility to handover test data via parameter 
+
+
+.. <legal notes>
+
+legal notes
+=================
+| SPDX-FileCopyrightText: © 2025 ekvip automation GmbH <info@ekvip.de>
+| SPDX-License-Identifier: Apache-2.0
+| For details check: Apache-2.0_
+
+.. _Apache-2.0: https://www.apache.org/licenses/LICENSE-2.0
+
+.. </legal notes>
+
+parameters
+==========
+
+*)
+METHOD testCalculateVelocity
+VAR_INPUT
+	(* The distance traveled, in raw value (e.g. 100.0) *)
+	distanceDeltaValue : LREAL;
+	(* The time it took to travel the distance (e.g. 10.0 seconds) *)
+	timeDeltaValue : LREAL ;
+	(* Unit of distance (e.g. METER, MILE) *)
+	distanceUnit : CNM_RecipeHandling.LengthUnit;
+	(* Unit of time (e.g. SECONDS, MINUTES) *)
+	timeUnit: CNM_RecipeHandling.DurationUnit;
+	(* Metric prefix for distance (e.g. KILO for kilometers) *)
+	distancePrefix : CNM_RecipeHandling.MetricPrefixes;
+	(* Metric prefix for time (e.g. MILLI for milliseconds) *)
+	timePrefix : CNM_RecipeHandling.MetricPrefixes;
+	(* Expected result of velocity calculation (e.g. 10.0) *)
+	expectedVelocityValue : LREAL;
+	(* Expected distance unit in result (e.g. METER) *)
+	expectedDistanceUnit :CNM_RecipeHandling.LengthUnit;
+	(* Expected metric prefix for distance (e.g. NONE) *)
+	expectedDistancePrefix : CNM_RecipeHandling.MetricPrefixes;
+	(* Expected time unit in result (e.g. SECONDS) *)
+	expectedDurationUnit:CNM_RecipeHandling.DurationUnit;
+	(*  Expected prefix for duration (e.g. MILLI) *)
+	expectedDurationPrefix : CNM_RecipeHandling.MetricPrefixes;
+	(* just the expectation if the assertion to test must be worng or true *)
+	//assertionShouldBeTrue :BOOL;
+END_VAR
+VAR
+	sourceDistance : CNM_RecipeHandling.Length;
+	sourceTime : CNM_RecipeHandling.Duration;
+	libResult : CNM_RecipeHandling.Velocity;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[
+sourceTime.unit := timeUnit;
+sourceTime.prefix := timePrefix; 
+
+sourceDistance.value := distanceDeltaValue;
+sourceDistance.unit := distanceUnit;
+sourceDistance.prefix := distancePrefix;
+
+sourceTime.value := timeDeltaValue;
+sourceTime.unit := timeUnit;
+sourceTime.prefix := timePrefix;
+
+
+libResult := CNM_RecipeHandling.CalculateVelocity(
+	distanceDelta :=sourceDistance,
+	timeDelta := sourceTime,
+);
+
+THIS^.AssertEquals_LREAL(
+    Expected := expectedVelocityValue,
+    Actual := libResult.value,
+    Delta := 0.01,
+   Message := SEL(expectedVelocityValue = libResult.value,
+	CONCAT('CalculateVelocity value fail: exp velocity = ',CONCAT( TO_STRING(expectedVelocityValue), concat( ', act velocity value = ', TO_STRING(libResult.value))))
+    ,'test is ok'));
+
+THIS^.AssertEquals_INT(
+	Expected := expectedDistancePrefix,
+	Actual := libResult.distancePrefix,
+    Message := SEL(expectedDistancePrefix = libResult.distancePrefix,
+	CONCAT('CalculateVelocity prefix fail: exp distance prefix  = ',CONCAT( TO_STRING(expectedDistancePrefix), concat( ', act distance prefix = ', TO_STRING(libResult.distancePrefix))))
+    ,'test is ok')
+);
+
+THIS^.AssertEquals_INT(
+	Expected := expectedDistanceUnit,
+	Actual := libResult.distanceUnit,
+    Message := SEL(expectedDistanceUnit = libResult.distanceUnit,
+	CONCAT('CalculateVelocity unit fail: exp distance unit = ',CONCAT( TO_STRING(expectedDistanceUnit), concat( ', act distance unit = ', TO_STRING(libResult.distanceUnit))))
+    ,'test is ok')
+);
+
+THIS^.AssertEquals_INT(
+	Expected := expectedDurationPrefix,
+	Actual := libResult.timePrefix,
+    Message := SEL(expectedDurationPrefix = libResult.timePrefix,
+	CONCAT('CalculateVelocity prefix fail: exp duration Prefix = ',CONCAT( TO_STRING(expectedDurationPrefix), concat( ', act duration Prefix = ', TO_STRING(libResult.timePrefix))))
+    ,'test is ok')
+);
+
+THIS^.AssertEquals_INT(
+	Expected := expectedDurationUnit,
+	Actual := libResult.timeUnit,
+    Message := SEL(expectedDurationUnit = libResult.timeUnit,
+	CONCAT('CalculateVelocity unit fail: exp duration Unit = ',CONCAT( TO_STRING(expectedDurationUnit), concat( ', act duration Unit = ', TO_STRING(libResult.timeUnit))))
+    ,'test is ok')
+);]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="testCalculateVelocitySpecialCases" Id="{cebc5773-c0c8-44e5-b614-e4808b22ed9d}" FolderPath="CalculateVelocity\">
+      <Declaration><![CDATA[(*
+
+short summary
+==================
+This test method tests ``CalculateVelocity``
+method of CNM_RecipeHandling library for special cases, 
+it provides the possibility to handover test data via parameter 
+
+
+.. <legal notes>
+
+legal notes
+=================
+| SPDX-FileCopyrightText: © 2025 ekvip automation GmbH <info@ekvip.de>
+| SPDX-License-Identifier: Apache-2.0
+| For details check: Apache-2.0_
+
+.. _Apache-2.0: https://www.apache.org/licenses/LICENSE-2.0
+
+.. </legal notes>
+
+parameters
+==========
+
+*)
+
+METHOD testCalculateVelocitySpecialCases
+	VAR_INPUT
+	(* The distance traveled, in raw value (e.g. 100.0) *)
+	distanceDeltaValue : LREAL;
+	(* The time it took to travel the distance (e.g. 10.0 seconds) *)
+	timeDeltaValue : LREAL ;
+	(* Unit of distance (e.g. METER, MILE) *)
+	distanceUnit : CNM_RecipeHandling.LengthUnit;
+	(* Unit of time (e.g. SECONDS, MINUTES) *)
+	timeUnit: CNM_RecipeHandling.DurationUnit;
+	(* Metric prefix for distance (e.g. KILO for kilometers) *)
+	distancePrefix : CNM_RecipeHandling.MetricPrefixes;
+	(* Metric prefix for time (e.g. MILLI for milliseconds) *)
+	timePrefix : CNM_RecipeHandling.MetricPrefixes;
+	(* Expected result of velocity calculation (e.g. 10.0) *)
+	expectedVelocityValue : LREAL;
+	(* Expected distance unit in result (e.g. METER) *)
+	expectedDistanceUnit :CNM_RecipeHandling.LengthUnit;
+	(* Expected metric prefix for distance (e.g. NONE) *)
+	expectedDistancePrefix : CNM_RecipeHandling.MetricPrefixes;
+	(* Expected time unit in result (e.g. SECONDS) *)
+	expectedDurationUnit:CNM_RecipeHandling.DurationUnit;
+	(*  Expected prefix for duration (e.g. MILLI) *)
+	expectedDurationPrefix : CNM_RecipeHandling.MetricPrefixes;;
+END_VAR
+VAR
+	sourceDistance : CNM_RecipeHandling.Length;
+	sourceTime : CNM_RecipeHandling.Duration;
+	libResult : CNM_RecipeHandling.Velocity;
+	(* contains the format string for the test message *)
+	//message :Tc2_System.T_MaxString := 'Test failed';
+	//Actual: INT;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[sourceTime.unit := timeUnit;
+sourceTime.prefix := timePrefix; 
+
+sourceDistance.value := distanceDeltaValue;
+sourceDistance.unit := distanceUnit;
+sourceDistance.prefix := distancePrefix;
+
+sourceTime.value := timeDeltaValue;
+sourceTime.unit := timeUnit;
+sourceTime.prefix := timePrefix;
+
+libResult := CNM_RecipeHandling.CalculateVelocity(
+	distanceDelta :=sourceDistance,
+	timeDelta := sourceTime,
+);
+
+IF Tc2_Utilities.LrealIsNaN(expectedVelocityValue) THEN
+	AssertTrue(Condition := Tc2_Utilities.LrealIsNaN(libResult.value),
+    Message := 'test faild assertion NaN should be true');
+ELSIF NOT (Tc2_Utilities.LrealIsFinite(expectedVelocityValue))THEN
+	 AssertTrue(Condition := NOT(Tc2_Utilities.LrealIsFinite(libResult.value)),
+    Message := 'test faild assertion INF should be True');
+END_IF
+
+]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="testConvertAngle" Id="{d1b9f2b4-b7b2-4d41-b0fc-54ead726a5f4}" FolderPath="ConvertAngle\">
+      <Declaration><![CDATA[METHOD testConvertAngle
+VAR_INPUT
+	(* The input value to convert (e.g. 3.14159) *)
+	sourceValue : LREAL;
+	(* The unit of the input angle (e.g. RADIANS, DEGREES) *)
+	sourceUnit : CNM_RecipeHandling.AngleUnit;
+	(* The expected result after conversion *)
+	expectedValue : LREAL;
+	(* The expected output unit *)
+	expectedUnit :CNM_RecipeHandling.AngleUnit;
+END_VAR
+VAR
+	sourceAngle : CNM_RecipeHandling.Angle;
+	libResult : CNM_RecipeHandling.Angle;
+	delta : LREAL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[// Setup test input
+sourceAngle.value := sourceValue;
+sourceAngle.unit := sourceUnit;
+
+// Call the function to test
+libResult := CNM_RecipeHandling.ConvertAngle(
+	angleToConvert := sourceAngle,
+	convertTo := expectedUnit
+);
+
+// Calculate appropriate delta based on magnitude of expected value
+IF ABS(expectedValue) > 1000.0 THEN
+	delta := 0.1; // Larger tolerance for large numbers (arc seconds)
+ELSIF ABS(expectedValue) > 100.0 THEN
+	delta := 0.01; // Medium tolerance for medium numbers
+ELSIF ABS(expectedValue) > 1.0 THEN
+	delta := 0.0001; // Small tolerance for normal numbers
+ELSE
+	delta := 0.000001; // Very small tolerance for small numbers
+END_IF
+
+// Verify the unit is correct
+THIS^.AssertEquals_INT(
+	Expected := expectedUnit,
+	Actual := libResult.unit,
+	Message := CONCAT('Unit conversion failed: expected ', 
+		CONCAT(TO_STRING(expectedUnit), 
+		CONCAT(', got ', TO_STRING(libResult.unit))))
+);
+
+// Verify the value is correct
+THIS^.AssertEquals_LREAL(
+	Expected := expectedValue,
+	Actual := libResult.value,
+	Delta := delta,
+	Message := CONCAT('Value conversion failed: from ', 
+		CONCAT(TO_STRING(sourceUnit), 
+		CONCAT(', to ', TO_STRING(expectedUnit))))
+);]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="testConvertAngleSpecialCases" Id="{e1b9f2b4-b7b2-4d41-b0fc-54ead726a5f5}" FolderPath="ConvertAngle\">
+      <Declaration><![CDATA[METHOD testConvertAngleSpecialCases
+VAR_INPUT
+	(* The input value to convert (e.g. NaN, Inf) *)
+	sourceValue : LREAL;
+	(* The unit of the input angle *)
+	sourceUnit : CNM_RecipeHandling.AngleUnit;
+	(* The expected result after conversion *)
+	expectedValue : LREAL;
+	(* The expected output unit *)
+	expectedUnit :CNM_RecipeHandling.AngleUnit;
+END_VAR
+VAR
+	sourceAngle : CNM_RecipeHandling.Angle;
+	libResult : CNM_RecipeHandling.Angle;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[// Setup test input
+sourceAngle.value := sourceValue;
+sourceAngle.unit := sourceUnit;
+
+// Call the function to test
+libResult := CNM_RecipeHandling.ConvertAngle(
+	angleToConvert := sourceAngle,
+	convertTo := expectedUnit
+);
+
+IF Tc2_Utilities.LrealIsNaN(expectedValue) THEN
+	AssertTrue(Condition := Tc2_Utilities.LrealIsNaN(libResult.value),
+    Message := 'test failed assertion NaN should be true');
+ELSIF NOT (Tc2_Utilities.LrealIsFinite(expectedValue))THEN
+	 AssertTrue(Condition := NOT(Tc2_Utilities.LrealIsFinite(libResult.value)),
+    Message := 'test faild assertion INF should be True');
+END_IF
+
+]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="testConvertAngularVelocity" Id="{2782ea9f-8abd-4db4-85b0-d413013f7d2b}" FolderPath="ConvertAngularVelocity\">
+      <Declaration><![CDATA[(*
+
+short summary
+==================
+This test method tests ``ConvertAngularVelocity``
+method of CNM_RecipeHandling library, 
+it provides the possibility to handover test data via parameter 
+
+
+.. <legal notes>
+
+legal notes
+=================
+| SPDX-FileCopyrightText: © 2025 ekvip automation GmbH <info@ekvip.de>
+| SPDX-License-Identifier: Apache-2.0
+| For details check: Apache-2.0_
+
+.. _Apache-2.0: https://www.apache.org/licenses/LICENSE-2.0
+
+.. </legal notes>
+
+parameters
+==========
+
+*)
+
+METHOD testConvertAngularVelocity
+VAR_INPUT
+    (* Input velocity value to be converted, e.g. 10.0 *)
+    sourceVelocityValue : LREAL; 
+    (* Expected result after conversion, used for assertion *)
+    expectedVelocityValue : LREAL;
+    (* Unit of distance used in velocity, e.g. METER *)
+    sourceUnit : CNM_RecipeHandling.AngleUnit;
+    (* Expected unit of distance after conversion *)
+    expectedAngleUnit : CNM_RecipeHandling.AngleUnit;
+    (* Unit of time used in velocity, e.g. SECONDS *)
+    sourceDurationUnit : CNM_RecipeHandling.DurationUnit;
+    (* Metric prefix of the time input, e.g. MILLI *)
+    sourceDurationPrefix : CNM_RecipeHandling.MetricPrefixes;
+    (* Expected time unit after conversion *)
+    expectedDurationUnit : CNM_RecipeHandling.DurationUnit;
+    (* Expected time prefix after conversion *)
+    expectedDurationPrefix : CNM_RecipeHandling.MetricPrefixes;
+END_VAR
+VAR
+	sourceVelocity : CNM_RecipeHandling.AngularVelocity;
+	libResult : CNM_RecipeHandling.AngularVelocity;
+	sourcePrefix: CNM_RecipeHandling.MetricPrefixes;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[
+//test-input
+sourceVelocity.value := sourceVelocityValue;
+sourceVelocity.angularDistanceUnit := sourceUnit;
+sourceVelocity.timeUnit := sourceDurationUnit;
+sourceVelocity.timePrefix := sourceDurationPrefix; 
+
+//function to call
+libResult := CNM_RecipeHandling.ConvertAngularVelocity(
+	angularVelocityToConvert := sourceVelocity,
+	convertAngleTo := expectedAngleUnit,
+	convertTimeTo := expectedDurationUnit,
+	resultPrefixTime := expectedDurationPrefix
+);
+
+THIS^.AssertEquals_LREAL(
+    Expected := expectedVelocityValue,
+    Actual := libResult.value,
+    Delta := 0.01,
+   Message := SEL(expectedVelocityValue = libResult.value,
+	CONCAT('value fail: exp velocity value = ',CONCAT( TO_STRING(expectedVelocityValue), concat( ', act  velocity value = ', TO_STRING(libResult.value))))
+    ,'test is ok'));
+
+THIS^.AssertEquals_INT(
+	Expected := expectedAngleUnit,
+	Actual := libResult.angularDistanceUnit,
+    Message := CONCAT('ConvertVelocity unit fail: exp distance unit = ',CONCAT( TO_STRING(expectedAngleUnit), concat( ', act distance unit = ', TO_STRING(libResult.angularDistanceUnit))))
+);
+
+THIS^.AssertEquals_INT(
+	Expected := expectedDurationPrefix,
+	Actual := libResult.timePrefix,
+    Message := SEL(expectedDurationPrefix = libResult.timePrefix,
+	CONCAT('ConvertVelocity prefix fail: exp duration Prefix = ',CONCAT( TO_STRING(expectedDurationPrefix), concat( ', act duration Prefix = ', TO_STRING(libResult.timePrefix))))
+    ,'test is ok')
+);
+THIS^.AssertEquals_INT(
+	Expected := expectedDurationUnit,
+	Actual := libResult.timeUnit,
+    Message := SEL(expectedDurationUnit = libResult.timeUnit,
+	CONCAT('ConvertVelocity unit fail: exp duration Unit = ',CONCAT( TO_STRING(expectedDurationUnit), concat( ', act duration Unit = ', TO_STRING(libResult.timeUnit))))
+    ,'test is ok')
+);]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="testConvertAngularVelocitySpecialCases" Id="{f5e73b9e-931c-49a7-92a3-66b206bd1f3e}" FolderPath="ConvertAngularVelocity\">
+      <Declaration><![CDATA[(*
+
+short summary
+==================
+This test method tests ``ConvertVelocity``
+method of CNM_RecipeHandling library for special cases, 
+it provides the possibility to handover test data via parameter 
+
+
+.. <legal notes>
+
+legal notes
+=================
+| SPDX-FileCopyrightText: © 2025 ekvip automation GmbH <info@ekvip.de>
+| SPDX-License-Identifier: Apache-2.0
+| For details check: Apache-2.0_
+
+.. _Apache-2.0: https://www.apache.org/licenses/LICENSE-2.0
+
+.. </legal notes>
+
+parameters
+==========
+
+*)
+
+METHOD testConvertAngularVelocitySpecialCases
+VAR_INPUT
+    (* Input velocity value to be converted, e.g. 10.0 *)
+    sourceVelocityValue : LREAL; 
+    (* Expected result after conversion, used for assertion *)
+    expectedVelocityValue : LREAL;
+    (* Unit of distance used in velocity, e.g. METER *)
+    sourceUnit : CNM_RecipeHandling.AngleUnit;
+    (* Expected unit of distance after conversion *)
+    expectedAngleUnit : CNM_RecipeHandling.AngleUnit;
+    (* Unit of time used in velocity, e.g. SECONDS *)
+    sourceDurationUnit : CNM_RecipeHandling.DurationUnit;
+    (* Metric prefix of the time input, e.g. MILLI *)
+    sourceDurationPrefix : CNM_RecipeHandling.MetricPrefixes;
+    (* Expected time unit after conversion *)
+    expectedDurationUnit : CNM_RecipeHandling.DurationUnit;
+    (* Expected time prefix after conversion *)
+    expectedDurationPrefix : CNM_RecipeHandling.MetricPrefixes;
+END_VAR
+VAR
+	sourceVelocity : CNM_RecipeHandling.AngularVelocity;
+	libResult : CNM_RecipeHandling.AngularVelocity;
+	sourcePrefix: CNM_RecipeHandling.MetricPrefixes;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[//test-input
+sourceVelocity.value := sourceVelocityValue;
+sourceVelocity.angularDistanceUnit := sourceUnit;
+sourceVelocity.timeUnit := sourceDurationUnit;
+sourceVelocity.timePrefix := sourceDurationPrefix; 
+
+//function to call
+libResult := CNM_RecipeHandling.ConvertAngularVelocity(
+	angularVelocityToConvert:=sourceVelocity,
+	convertAngleTo :=expectedAngleUnit,
+	convertTimeTo := expectedDurationUnit,
+	resultPrefixTime := expectedDurationPrefix
+);
+
+IF Tc2_Utilities.LrealIsNaN(expectedVelocityValue) THEN
+	AssertTrue(Condition := Tc2_Utilities.LrealIsNaN(libResult.value),
+    Message := 'test faild assertion NaN should be true');
+ELSIF NOT (Tc2_Utilities.LrealIsFinite(expectedVelocityValue))THEN
+	 AssertFalse(Condition := Tc2_Utilities.LrealIsFinite(libResult.value),
+    Message := 'test faild assertion INF should be True');
+END_IF
+
+]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="testConvertArea" Id="{306bd8f7-a522-4588-85bd-02d127634d4a}" FolderPath="ConvertArea\">
+      <Declaration><![CDATA[(*
+
+short summary
+==================
+This test method tests ``ConvertArea``
+method of CNM_RecipeHandling library, 
+it provides the possibility to handover test data via parameter 
+
+
+.. <legal notes>
+
+legal notes
+=================
+| SPDX-FileCopyrightText: © 2025 ekvip automation GmbH <info@ekvip.de>
+| SPDX-License-Identifier: Apache-2.0
+| For details check: Apache-2.0_
+
+.. _Apache-2.0: https://www.apache.org/licenses/LICENSE-2.0
+
+.. </legal notes>
+
+parameters
+==========
+
+*)
+
+METHOD testConvertArea
+VAR_INPUT
+	(* Input area value to be converted (e.g., 1.0) *)
+	sourceValue : LREAL;
+	(* Unit of the source area (e.g., SQUARE_METER, US_ACRE) *)
+	sourceUnit : CNM_RecipeHandling.AreaUnit;
+	(* Metric prefix of the source area unit (e.g., NONE, KILO, MILLI) *)
+	sourcePrefix : CNM_RecipeHandling.MetricPrefixes;
+	(* Expected result value after conversion *)
+	expectedValue : LREAL;
+	(* Target unit to which the area should be converted *)
+	expectedUnit :CNM_RecipeHandling.AreaUnit;
+	(* Metric prefix for the expected unit (e.g., NONE, MILLI) *)
+	expectedPrefix : CNM_RecipeHandling.MetricPrefixes;
+END_VAR
+VAR
+	sourceArea : CNM_RecipeHandling.Area;
+	libResult : CNM_RecipeHandling.Area;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[sourceArea.value := sourceValue;
+sourceArea.unit := sourceUnit;
+sourceArea.prefix := sourcePrefix;
+
+libResult := CNM_RecipeHandling.ConvertArea(
+	areaToconvert := sourceArea,
+	convertTo := expectedUnit,
+	resultPrefix := expectedPrefix
+);
+
+THIS^.AssertEquals_LREAL(
+	Expected := expectedValue,
+	Actual := libResult.value,
+	Delta := 0.01,
+   Message := SEL(expectedValue = libResult.value,
+	CONCAT('normal case testConvertArea value fail: exp = ',CONCAT( TO_STRING(expectedValue), concat( ', act = ', TO_STRING(libResult.value))))
+    ,'test is ok'))
+;
+THIS^.AssertEquals_INT(
+	Expected := expectedPrefix,
+	Actual := libResult.prefix,
+    Message := SEL(expectedPrefix = libResult.prefix,
+	CONCAT('normal case testConvertAre prefix fail: exp = ',CONCAT( TO_STRING(expectedPrefix), concat( ', act = ', TO_STRING(libResult.prefix))))
+    ,'test is ok')
+);
+
+THIS^.AssertEquals_INT(
+	Expected := expectedUnit,
+	Actual := libResult.unit,
+    Message := SEL(expectedUnit = libResult.unit,
+	CONCAT('normal case testConvertAre unit fail: exp = ',CONCAT( TO_STRING(expectedUnit), concat( ', act = ', TO_STRING(libResult.unit))))
+    ,'test is ok')
+);]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="testConvertAreaSpecialCases" Id="{d79555ca-5a86-409a-bcc2-083b4dea9ca2}" FolderPath="ConvertArea\">
+      <Declaration><![CDATA[(*
+
+short summary
+==================
+This test method tests ``ConvertArea``
+method of CNM_RecipeHandling library, 
+it provides the possibility to handover test data via parameter 
+
+
+.. <legal notes>
+
+legal notes
+=================
+| SPDX-FileCopyrightText: © 2025 ekvip automation GmbH <info@ekvip.de>
+| SPDX-License-Identifier: Apache-2.0
+| For details check: Apache-2.0_
+
+.. _Apache-2.0: https://www.apache.org/licenses/LICENSE-2.0
+
+.. </legal notes>
+
+parameters
+==========
+
+*)
+METHOD testConvertAreaSpecialCases
+VAR_INPUT
+	(* Input area value to be converted (e.g., 1.0) *)
+	sourceValue : LREAL;
+	(* Unit of the source area (e.g., SQUARE_METER, US_ACRE) *)
+	sourceUnit : CNM_RecipeHandling.AreaUnit;
+	(* Metric prefix of the source area unit (e.g., NONE, KILO, MILLI) *)
+	sourcePrefix : CNM_RecipeHandling.MetricPrefixes;
+	(* Expected result value after conversion *)
+	expectedValue : LREAL;
+	(* Target unit to which the area should be converted *)
+	expectedUnit :CNM_RecipeHandling.AreaUnit;
+	(* Metric prefix for the expected unit (e.g., NONE, MILLI) *)
+	expectedPrefix : CNM_RecipeHandling.MetricPrefixes;
+END_VAR
+VAR
+	a :BOOL;
+	input : CNM_RecipeHandling.Area;
+	libResult : CNM_RecipeHandling.Area;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[input.value := sourceValue;
+input.unit := sourceUnit;
+input.prefix := sourcePrefix;
+
+libResult := CNM_RecipeHandling.ConvertArea(
+	areaToconvert := input,
+	convertTo := expectedUnit,
+	resultPrefix := expectedPrefix
+);
+
+IF Tc2_Utilities.LrealIsNaN(expectedValue) THEN
+	AssertTrue(Condition := Tc2_Utilities.LrealIsNaN(libResult.value),
+    Message := 'test faild assertion NaN should be true');
+ELSIF NOT (Tc2_Utilities.LrealIsFinite(expectedValue))THEN
+	 AssertTrue(Condition := NOT(Tc2_Utilities.LrealIsFinite(libResult.value)),
+    Message := 'test faild assertion INF should be True');
+END_IF
+
+]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="testConvertDuration" Id="{6c21fda9-6c63-4b8e-bc17-3cb84040f9a7}" FolderPath="ConvertDuration\">
+      <Declaration><![CDATA[(*
+
+short summary
+==================
+This test method tests ``ConvertDuration``
+method of CNM_RecipeHandling library, 
+it provides the possibility to handover test data via parameter 
+
+
+.. <legal notes>
+
+legal notes
+=================
+| SPDX-FileCopyrightText: © 2025 ekvip automation GmbH <info@ekvip.de>
+| SPDX-License-Identifier: Apache-2.0
+| For details check: Apache-2.0_
+
+.. _Apache-2.0: https://www.apache.org/licenses/LICENSE-2.0
+
+.. </legal notes>
+
+parameters
+==========
+
+*)
+
+METHOD testConvertDuration
+VAR_INPUT
+	(* The original time value to convert (e.g. 120.0) *)
+	sourceValue : LREAL;
+	(* The unit of the input time (e.g. SECONDS, MINUTES) *)
+	sourceUnit : CNM_RecipeHandling.DurationUnit;
+	(* The metric prefix for input time (e.g. MILLI for milliseconds) *)
+	sourcePrefix : CNM_RecipeHandling.MetricPrefixes;
+	(* The expected result value after conversion (e.g. 2.0) *)
+	expectedValue : LREAL;
+	(* The expected time unit after conversion (e.g. MINUTES) *)
+	expectedUnit :CNM_RecipeHandling.DurationUnit;
+	(* The expected metric prefix for the result (e.g. NONE) *)
+	expectedPrefix : CNM_RecipeHandling.MetricPrefixes;
+END_VAR
+VAR
+	sourceDuration : CNM_RecipeHandling.Duration;
+	libResult : CNM_RecipeHandling.Duration;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[sourceDuration.value := sourceValue;
+sourceDuration.unit := sourceUnit;
+sourceDuration.prefix := sourcePrefix;
+
+libResult := CNM_RecipeHandling.ConvertDuration(
+	durationToConvert :=sourceDuration,
+	convertTo := expectedUnit,
+	resultPrefix := expectedPrefix
+);
+
+THIS^.AssertEquals_LREAL(
+    Expected := expectedValue,
+    Actual := libResult.value,
+    Delta := 0.01,
+   Message := SEL(expectedValue = libResult.value,
+	CONCAT('ConvertDuration value fail: exp = ',CONCAT( TO_STRING(expectedValue), concat( ', act = ', TO_STRING(libResult.value))))
+    ,'test is ok'));
+
+THIS^.AssertEquals_INT(
+	Expected := expectedPrefix,
+	Actual := libResult.prefix,
+    Message := SEL(expectedPrefix = libResult.prefix,
+	CONCAT('ConvertDuration prefix fail: exp = ',CONCAT( TO_STRING(expectedPrefix), concat( ', act = ', TO_STRING(libResult.prefix))))
+    ,'test is ok')
+);
+
+THIS^.AssertEquals_INT(
+	Expected := expectedUnit,
+	Actual := libResult.unit,
+    Message := SEL(expectedUnit = libResult.unit,
+	CONCAT('ConvertDuration unit fail: exp = ',CONCAT( TO_STRING(expectedUnit), concat( ', act = ', TO_STRING(libResult.unit))))
+    ,'test is ok')
+);]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="testConvertDurationSpecialCases" Id="{2cb6d6c3-eeca-49e5-af06-8196e7269f8a}" FolderPath="ConvertDuration\">
+      <Declaration><![CDATA[(*
+
+short summary
+==================
+This test method tests ``ConvertDuration``
+method of CNM_RecipeHandling library for special cases, 
+it provides the possibility to handover test data via parameter 
+
+
+.. <legal notes>
+
+legal notes
+=================
+| SPDX-FileCopyrightText: © 2025 ekvip automation GmbH <info@ekvip.de>
+| SPDX-License-Identifier: Apache-2.0
+| For details check: Apache-2.0_
+
+.. _Apache-2.0: https://www.apache.org/licenses/LICENSE-2.0
+
+.. </legal notes>
+
+parameters
+==========
+
+*)
+
+METHOD testConvertDurationSpecialCases
+VAR_INPUT
+	(* The original time value to convert (e.g. 120.0) *)
+	sourceValue : LREAL;
+	(* The unit of the input time (e.g. SECONDS, MINUTES) *)
+	sourceUnit : CNM_RecipeHandling.DurationUnit;
+	(* The metric prefix for input time (e.g. MILLI for milliseconds) *)
+	sourcePrefix : CNM_RecipeHandling.MetricPrefixes;
+	(* The expected result value after conversion (e.g. 2.0) *)
+	expectedValue : LREAL;
+	(* The expected time unit after conversion (e.g. MINUTES) *)
+	expectedUnit :CNM_RecipeHandling.DurationUnit;
+	(* The expected metric prefix for the result (e.g. NONE) *)
+	expectedPrefix : CNM_RecipeHandling.MetricPrefixes;
+END_VAR
+VAR
+	sourceDuration : CNM_RecipeHandling.Duration;
+	libResult : CNM_RecipeHandling.Duration;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[sourceDuration.value := sourceValue;
+sourceDuration.unit := sourceUnit;
+sourceDuration.prefix := sourcePrefix;
+
+libResult := CNM_RecipeHandling.ConvertDuration(
+	durationToConvert :=sourceDuration,
+	convertTo := expectedUnit,
+	resultPrefix := expectedPrefix
+);
+
+IF Tc2_Utilities.LrealIsNaN(expectedValue) THEN
+	AssertTrue(Condition := Tc2_Utilities.LrealIsNaN(libResult.value),
+    Message := 'test faild assertion NaN should be true');
+ELSIF NOT (Tc2_Utilities.LrealIsFinite(expectedValue))THEN
+	 AssertTrue(Condition := NOT(Tc2_Utilities.LrealIsFinite(libResult.value)),
+    Message := 'test faild assertion INF should be True');
+END_IF
+
+]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="testConvertLength" Id="{c968a596-147e-4a21-8d5e-3686851838e6}" FolderPath="ConvertLength\">
+      <Declaration><![CDATA[(*
+
+short summary
+==================
+This test method tests ``ConvertLength``
+method of CNM_RecipeHandling library, 
+it provides the possibility to handover test data via parameter 
+
+
+.. <legal notes>
+
+legal notes
+=================
+| SPDX-FileCopyrightText: © 2025 ekvip automation GmbH <info@ekvip.de>
+| SPDX-License-Identifier: Apache-2.0
+| For details check: Apache-2.0_
+
+.. _Apache-2.0: https://www.apache.org/licenses/LICENSE-2.0
+
+.. </legal notes>
+
+parameters
+==========
+
+*)
+
+METHOD testConvertLength
+VAR_INPUT
+	(* The input value to convert (e.g. 1.0) *)
+	sourceValue : LREAL;
+	(* The unit of the input length (e.g. METER, INCH) *)
+	sourceUnit : CNM_RecipeHandling.LengthUnit;
+	(* Metric prefix for the input value (e.g. MILLI, KILO) *)
+	sourcePrefix : CNM_RecipeHandling.MetricPrefixes;
+	(* The expected result after conversion (e.g. 1000.0) *)
+	expectedValue : LREAL;
+	(* The expected output unit (e.g. MILLIMETER) *)
+	expectedUnit :CNM_RecipeHandling.LengthUnit;
+	(* The expected metric prefix for the output (e.g. NONE) *)
+	expectedPrefix : CNM_RecipeHandling.MetricPrefixes;
+END_VAR
+VAR
+	sourceDistance : CNM_RecipeHandling.Length;
+	libResult : CNM_RecipeHandling.Length;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[
+//teat-input
+sourceDistance.value := sourceValue;
+sourceDistance.unit := sourceUnit;
+sourceDistance.prefix := sourcePrefix;
+
+//function to call
+libResult := CNM_RecipeHandling.ConvertLength(
+	lengthToConvert :=sourceDistance,
+	convertTo := expectedUnit,
+	resultPrefix := expectedPrefix
+);
+
+THIS^.AssertEquals_LREAL(
+    Expected := expectedValue,
+    Actual := libResult.value,
+    Delta := 0.01,
+   Message := SEL(expectedValue = libResult.value,
+	CONCAT('ConvertLength value fail: exp = ',CONCAT( TO_STRING(expectedValue), concat( ', act = ', TO_STRING(libResult.value))))
+    ,'test is ok'));
+
+
+THIS^.AssertEquals_INT(
+	Expected := expectedPrefix,
+	Actual := libResult.prefix,
+    Message := SEL(expectedPrefix = libResult.prefix,
+	CONCAT('ConvertLength prefix fail: exp = ',CONCAT( TO_STRING(expectedPrefix), concat( ', act = ', TO_STRING(libResult.prefix))))
+    ,'test is ok')
+);
+THIS^.AssertEquals_INT(
+	Expected := expectedUnit,
+	Actual := libResult.unit,
+    Message := SEL(expectedUnit = libResult.unit,
+	CONCAT('ConvertLength unit fail: exp = ',CONCAT( TO_STRING(expectedUnit), concat( ', act = ', TO_STRING(libResult.unit))))
+    ,'test is ok')
+);]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="testConvertLengthSpecialCases" Id="{52036455-d1b0-44ab-8b88-b2ee7a547615}" FolderPath="ConvertLength\">
+      <Declaration><![CDATA[(*
+
+short summary
+==================
+This test method tests ``ConvertLength``
+method of CNM_RecipeHandling library for special cases, 
+it provides the possibility to handover test data via parameter 
+
+
+.. <legal notes>
+
+legal notes
+=================
+| SPDX-FileCopyrightText: © 2025 ekvip automation GmbH <info@ekvip.de>
+| SPDX-License-Identifier: Apache-2.0
+| For details check: Apache-2.0_
+
+.. _Apache-2.0: https://www.apache.org/licenses/LICENSE-2.0
+
+.. </legal notes>
+
+parameters
+==========
+
+*)
+METHOD testConvertLengthSpecialCases
+VAR_INPUT
+	(* The input value to convert (e.g. 1.0) *)
+	sourceValue : LREAL;
+	(* The unit of the input length (e.g. METER, INCH) *)
+	sourceUnit : CNM_RecipeHandling.LengthUnit;
+	(* Metric prefix for the input value (e.g. MILLI, KILO) *)
+	sourcePrefix : CNM_RecipeHandling.MetricPrefixes;
+	(* The expected result after conversion (e.g. 1000.0) *)
+	expectedValue : LREAL;
+	(* The expected output unit (e.g. MILLIMETER) *)
+	expectedUnit :CNM_RecipeHandling.LengthUnit;
+	(* The expected metric prefix for the output (e.g. NONE) *)
+	expectedPrefix : CNM_RecipeHandling.MetricPrefixes;
+END_VAR
+VAR
+	sourceDistance : CNM_RecipeHandling.Length;
+	libResult : CNM_RecipeHandling.Length;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[
+//teat-input
+sourceDistance.value := sourceValue;
+sourceDistance.unit := sourceUnit;
+sourceDistance.prefix := sourcePrefix;
+
+//function to call
+libResult := CNM_RecipeHandling.ConvertLength(
+	lengthToConvert :=sourceDistance,
+	convertTo := expectedUnit,
+	resultPrefix := expectedPrefix
+);
+
+IF Tc2_Utilities.LrealIsNaN(expectedValue) THEN
+	AssertTrue(Condition := Tc2_Utilities.LrealIsNaN(libResult.value),
+    Message := 'test faild assertion NaN should be true');
+ELSIF NOT (Tc2_Utilities.LrealIsFinite(expectedValue))THEN
+	 AssertTrue(Condition := NOT(Tc2_Utilities.LrealIsFinite(libResult.value)),
+    Message := 'test faild assertion INF should be True');
+END_IF
+
+]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="testConvertPressure" Id="{520f45a0-5f66-4eeb-83a2-12d63fd43455}" FolderPath="ConvertPressure\">
+      <Declaration><![CDATA[(*
+
+short summary
+==================
+This test method tests ``ConvertPressure``
+method of CNM_RecipeHandling library, 
+it provides the possibility to handover test data via parameter 
+
+
+.. <legal notes>
+
+legal notes
+=================
+| SPDX-FileCopyrightText: © 2025 ekvip automation GmbH <info@ekvip.de>
+| SPDX-License-Identifier: Apache-2.0
+| For details check: Apache-2.0_
+
+.. _Apache-2.0: https://www.apache.org/licenses/LICENSE-2.0
+
+.. </legal notes>
+
+parameters
+==========
+
+*)
+
+METHOD testConvertPressure
+VAR_INPUT
+	(* The numeric pressure value to convert (e.g. 101325.0) *)
+	sourceValue : LREAL;
+	(* The original pressure unit (e.g. PASCAL, BAR) *)
+	sourceUnit : CNM_RecipeHandling.PressureUnit;
+	(*  Metric prefix for the input value (e.g. KILO, MILLI) *)
+	sourcePrefix : CNM_RecipeHandling.MetricPrefixes;
+	(* The expected result after conversion (e.g. 1.01325) *)
+	expectedValue : LREAL;
+	(* The target unit to which the pressure should be converted (e.g. BAR) *)
+	expectedUnit :CNM_RecipeHandling.PressureUnit;
+	(* Metric prefix for the expected result (e.g. NONE) *)
+	expectedPrefix : CNM_RecipeHandling.MetricPrefixes;
+END_VAR
+VAR
+	sourcePressure : CNM_RecipeHandling.Pressure;
+	libResult : CNM_RecipeHandling.Pressure;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[
+//test-input
+sourcePressure.value := sourceValue;
+sourcePressure.unit := sourceUnit;
+sourcePressure.prefix := sourcePrefix;
+
+//function to call
+libResult := CNM_RecipeHandling.ConvertPressure(
+	pressureToConvert :=sourcePressure,
+	convertTo := expectedUnit,
+	resultPrefix := expectedPrefix
+);
+
+THIS^.AssertEquals_LREAL(
+    Expected := expectedValue,
+    Actual := libResult.value,
+    Delta := 0.01,
+   Message := SEL(expectedValue = libResult.value,
+	CONCAT('Pressure value fail: exp = ',CONCAT( TO_STRING(expectedValue), concat( ', act = ', TO_STRING(libResult.value))))
+    ,'test is ok'));
+
+
+THIS^.AssertEquals_INT(
+	Expected := expectedPrefix,
+	Actual := libResult.prefix,
+    Message := SEL(expectedPrefix = libResult.prefix,
+	CONCAT('Pressure prefix fail: exp = ',CONCAT( TO_STRING(expectedPrefix), concat( ', act = ', TO_STRING(libResult.prefix))))
+    ,'test is ok')
+);
+THIS^.AssertEquals_INT(
+	Expected := expectedUnit,
+	Actual := libResult.unit,
+    Message := SEL(expectedUnit = libResult.unit,
+	CONCAT('Pressure unit fail: exp = ',CONCAT( TO_STRING(expectedUnit), concat( ', act = ', TO_STRING(libResult.unit))))
+    ,'test is ok')
+);]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="testConvertPressureSpecialCases" Id="{4adc2630-e6ad-4d98-84b2-746911c28eea}" FolderPath="ConvertPressure\">
+      <Declaration><![CDATA[(*
+
+short summary
+==================
+This test method tests ``ConvertPressure``
+method of CNM_RecipeHandling library for special cases, 
+it provides the possibility to handover test data via parameter 
+
+
+.. <legal notes>
+
+legal notes
+=================
+| SPDX-FileCopyrightText: © 2025 ekvip automation GmbH <info@ekvip.de>
+| SPDX-License-Identifier: Apache-2.0
+| For details check: Apache-2.0_
+
+.. _Apache-2.0: https://www.apache.org/licenses/LICENSE-2.0
+
+.. </legal notes>
+
+parameters
+==========
+
+*)
+METHOD testConvertPressureSpecialCases
+VAR_INPUT
+	(* The numeric pressure value to convert (e.g. 101325.0) *)
+	sourceValue : LREAL;
+	(* The original pressure unit (e.g. PASCAL, BAR) *)
+	sourceUnit : CNM_RecipeHandling.PressureUnit;
+	(*  Metric prefix for the input value (e.g. KILO, MILLI) *)
+	sourcePrefix : CNM_RecipeHandling.MetricPrefixes;
+	(* The expected result after conversion (e.g. 1.01325) *)
+	expectedValue : LREAL;
+	(* The target unit to which the pressure should be converted (e.g. BAR) *)
+	expectedUnit :CNM_RecipeHandling.PressureUnit;
+	(* Metric prefix for the expected result (e.g. NONE) *)
+	expectedPrefix : CNM_RecipeHandling.MetricPrefixes;
+END_VAR
+VAR
+	sourcePressure : CNM_RecipeHandling.Pressure;
+	libResult : CNM_RecipeHandling.Pressure;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[sourcePressure.value := sourceValue;
+sourcePressure.unit := sourceUnit;
+sourcePressure.prefix := sourcePrefix;
+
+libResult := CNM_RecipeHandling.ConvertPressure(
+	pressureToConvert :=sourcePressure,
+	convertTo := expectedUnit,
+	resultPrefix := expectedPrefix
+);
+IF Tc2_Utilities.LrealIsNaN(expectedValue) THEN
+	AssertTrue(Condition := Tc2_Utilities.LrealIsNaN(libResult.value),
+    Message := 'test faild assertion NaN should be true');
+ELSIF NOT (Tc2_Utilities.LrealIsFinite(expectedValue))THEN
+	 AssertTrue(Condition := NOT(Tc2_Utilities.LrealIsFinite(libResult.value)),
+    Message := 'test faild assertion INF should be True');
+END_IF
+
+]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="testConvertTemprature" Id="{46a9f374-c86c-478b-aa1d-87a29a065a19}" FolderPath="ConvertTemperature\">
+      <Declaration><![CDATA[(*
+
+short summary
+==================
+This test method tests ``ConvertTemperature``
+method of CNM_RecipeHandling library, 
+it provides the possibility to handover test data via parameter 
+
+
+.. <legal notes>
+
+legal notes
+=================
+| SPDX-FileCopyrightText: © 2025 ekvip automation GmbH <info@ekvip.de>
+| SPDX-License-Identifier: Apache-2.0
+| For details check: Apache-2.0_
+
+.. _Apache-2.0: https://www.apache.org/licenses/LICENSE-2.0
+
+.. </legal notes>
+
+parameters
+==========
+
+*)
+
+METHOD testConvertTemprature
+VAR_INPUT
+	(* The numeric temperature value to be converted (e.g. 100.0) *)
+	sourceValue : LREAL;
+	(* The unit of the input temperature (e.g. DEGREE_CELSIUS, KELVIN) *)
+	sourceUnit : CNM_RecipeHandling.TemperatureUnit;
+	(* The expected result after conversion (e.g. 212.0) *)
+	expectedValue : LREAL;
+	(* The unit expected after conversion (e.g. DEGREE_FAHRENHEIT) *)
+	expectedUnit :CNM_RecipeHandling.TemperatureUnit;
+END_VAR
+VAR
+	sourceTemprature : CNM_RecipeHandling.Temperature;
+	libResult : CNM_RecipeHandling.Temperature;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[sourceTemprature.value := sourceValue;
+sourceTemprature.unit := sourceUnit;
+
+libResult := CNM_RecipeHandling.ConvertTemperature(
+	temperatureToConvert := sourceTemprature,
+	convertTo := expectedUnit,
+);
+
+THIS^.AssertEquals_LREAL(
+    Expected := expectedValue,
+    Actual := libResult.value,
+    Delta := 0.01,
+   Message := SEL(expectedValue = libResult.value,
+	CONCAT('ConvertTemprature value fail: exp = ',CONCAT( TO_STRING(expectedValue), concat( ', act = ', TO_STRING(libResult.value))))
+    ,'test is ok'));
+
+THIS^.AssertEquals_INT(
+	Expected := expectedUnit,
+	Actual := libResult.unit,
+    Message := SEL(expectedUnit = libResult.unit,
+	CONCAT('ConvertTemprature unit fail: exp = ',CONCAT( TO_STRING(expectedUnit), concat( ', act = ', TO_STRING(libResult.unit))))
+    ,'test is ok')
+);
+]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="testConvertTempratureSpecialCases" Id="{1fcfa301-24b8-4733-9ed7-05866d0b41d9}" FolderPath="ConvertTemperature\">
+      <Declaration><![CDATA[(*
+
+short summary
+==================
+This test method tests ``ConvertTemperature``
+method of CNM_RecipeHandling library for special cases, 
+it provides the possibility to handover test data via parameter 
+
+
+.. <legal notes>
+
+legal notes
+=================
+| SPDX-FileCopyrightText: © 2025 ekvip automation GmbH <info@ekvip.de>
+| SPDX-License-Identifier: Apache-2.0
+| For details check: Apache-2.0_
+
+.. _Apache-2.0: https://www.apache.org/licenses/LICENSE-2.0
+
+.. </legal notes>
+
+parameters
+==========
+
+*)
+
+METHOD testConvertTempratureSpecialCases
+VAR_INPUT
+	(* The numeric temperature value to be converted (e.g. 100.0) *)
+	sourceValue : LREAL;
+	(* The unit of the input temperature (e.g. DEGREE_CELSIUS, KELVIN) *)
+	sourceUnit : CNM_RecipeHandling.TemperatureUnit;
+	(* The expected result after conversion (e.g. 212.0) *)
+	expectedValue : LREAL;
+	(* The unit expected after conversion (e.g. DEGREE_FAHRENHEIT) *)
+	expectedUnit :CNM_RecipeHandling.TemperatureUnit;
+END_VAR
+VAR
+	sourceTemprature : CNM_RecipeHandling.Temperature;
+	libResult : CNM_RecipeHandling.Temperature;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[//test input
+sourceTemprature.value := sourceValue;
+sourceTemprature.unit := sourceUnit;
+
+//function to call
+
+libResult := CNM_RecipeHandling.ConvertTemperature(
+	temperatureToConvert := sourceTemprature,
+	convertTo := expectedUnit,
+);
+IF Tc2_Utilities.LrealIsNaN(expectedValue) THEN
+	AssertTrue(Condition := Tc2_Utilities.LrealIsNaN(libResult.value),
+    Message := 'test faild assertion NaN should be true');
+ELSIF NOT (Tc2_Utilities.LrealIsFinite(expectedValue))THEN
+	 AssertTrue(Condition := NOT(Tc2_Utilities.LrealIsFinite(libResult.value)),
+    Message := 'test faild assertion INF should be True');
+END_IF
+
+]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="testConvertVelocity" Id="{51564b59-cb14-4f05-b610-5c1d7529b08c}" FolderPath="ConvertVelocity\">
+      <Declaration><![CDATA[(*
+
+short summary
+==================
+This test method tests ``ConvertVelocity``
+method of CNM_RecipeHandling library, 
+it provides the possibility to handover test data via parameter 
+
+
+.. <legal notes>
+
+legal notes
+=================
+| SPDX-FileCopyrightText: © 2025 ekvip automation GmbH <info@ekvip.de>
+| SPDX-License-Identifier: Apache-2.0
+| For details check: Apache-2.0_
+
+.. _Apache-2.0: https://www.apache.org/licenses/LICENSE-2.0
+
+.. </legal notes>
+
+parameters
+==========
+
+*)
+
+METHOD testConvertVelocity
+VAR_INPUT
+    (* Input velocity value to be converted, e.g. 10.0 *)
+    sourceVelocityValue : LREAL; 
+
+    (* Expected result after conversion, used for assertion *)
+    expectedVelocityValue : LREAL;
+
+    (* Unit of distance used in velocity, e.g. METER *)
+    sourceUnit : CNM_RecipeHandling.LengthUnit;
+
+    (* Metric prefix of the distance input, e.g. KILO *)
+    sourceDistancePrefix : CNM_RecipeHandling.MetricPrefixes;
+
+    (* Expected unit of distance after conversion *)
+    expectedDistanceUnit : CNM_RecipeHandling.LengthUnit;
+
+    (* Expected metric prefix for the converted distance *)
+    expectedDistancePrefix : CNM_RecipeHandling.MetricPrefixes;
+
+    (* Unit of time used in velocity, e.g. SECONDS *)
+    sourceDurationUnit : CNM_RecipeHandling.DurationUnit;
+
+    (* Metric prefix of the time input, e.g. MILLI *)
+    sourceDurationPrefix : CNM_RecipeHandling.MetricPrefixes;
+
+    (* Expected time unit after conversion *)
+    expectedDurationUnit : CNM_RecipeHandling.DurationUnit;
+
+    (* Expected time prefix after conversion *)
+    expectedDurationPrefix : CNM_RecipeHandling.MetricPrefixes;
+
+    (* Whether the assertion is expected to pass (TRUE) or fail (FALSE) *)
+	assertionShouldBeTrue :BOOL;
+END_VAR
+VAR
+	sourceDistance : CNM_RecipeHandling.Length;
+	sourceDuration : CNM_RecipeHandling.Duration;
+	sourceVelocity : CNM_RecipeHandling.Velocity;
+	libResult : CNM_RecipeHandling.Velocity;
+	sourcePrefix: CNM_RecipeHandling.MetricPrefixes;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[
+//test-input
+sourceVelocity.value := sourceVelocityValue;
+sourceVelocity.distanceUnit := sourceUnit;
+sourceVelocity.distancePrefix := sourceDistancePrefix;
+sourceVelocity.timeUnit := sourceDurationUnit;
+sourceVelocity.timePrefix := sourceDurationPrefix; 
+
+sourceDistance.unit := sourceUnit;
+sourceDistance.prefix := sourceDistancePrefix;
+sourceDuration.unit := sourceDurationUnit;
+sourceDuration.prefix := sourceDurationPrefix;
+
+//function to call
+libResult := CNM_RecipeHandling.ConvertVelocity(
+	velocityToConvert:=sourceVelocity,
+	convertDistanceTo :=expectedDistanceUnit,
+	convertTimeTo := expectedDurationUnit,
+	resultPrefixDistance := expectedDistancePrefix,
+	resultPrefixTime := expectedDurationPrefix
+);
+THIS^.AssertEquals_LREAL(
+    Expected := expectedVelocityValue,
+    Actual := libResult.value,
+    Delta := 0.01,
+   Message := SEL(expectedVelocityValue = libResult.value,
+	CONCAT('value fail: exp velocity value = ',CONCAT( TO_STRING(expectedVelocityValue), concat( ', act  velocity value = ', TO_STRING(libResult.value))))
+    ,'test is ok'));
+
+
+THIS^.AssertEquals_INT(
+	Expected := expectedDistancePrefix,
+	Actual := libResult.distancePrefix,
+    Message := SEL(expectedDistancePrefix = libResult.distancePrefix,
+	CONCAT('ConvertVelocity prefix fail: exp distance prefix  = ',CONCAT( TO_STRING(expectedDistancePrefix), concat( ', act distance prefix = ', TO_STRING(libResult.distancePrefix))))
+    ,'test is ok')
+);
+THIS^.AssertEquals_INT(
+	Expected := expectedDistanceUnit,
+	Actual := libResult.distanceUnit,
+    Message := SEL(expectedDistanceUnit = libResult.distanceUnit,
+	CONCAT('ConvertVelocity unit fail: exp distance unit = ',CONCAT( TO_STRING(expectedDistanceUnit), concat( ', act distance unit = ', TO_STRING(libResult.distanceUnit))))
+    ,'test is ok')
+);
+
+THIS^.AssertEquals_INT(
+	Expected := expectedDurationPrefix,
+	Actual := libResult.timePrefix,
+    Message := SEL(expectedDurationPrefix = libResult.timePrefix,
+	CONCAT('ConvertVelocity prefix fail: exp duration Prefix = ',CONCAT( TO_STRING(expectedDurationPrefix), concat( ', act duration Prefix = ', TO_STRING(libResult.timePrefix))))
+    ,'test is ok')
+);
+THIS^.AssertEquals_INT(
+	Expected := expectedDurationUnit,
+	Actual := libResult.timeUnit,
+    Message := SEL(expectedDurationUnit = libResult.timeUnit,
+	CONCAT('ConvertVelocity unit fail: exp duration Unit = ',CONCAT( TO_STRING(expectedDurationUnit), concat( ', act duration Unit = ', TO_STRING(libResult.timeUnit))))
+    ,'test is ok')
+);]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="testConvertVelocitySpecialCases" Id="{711cbaa2-979a-4fcf-8881-39c1f7ef8426}" FolderPath="ConvertVelocity\">
+      <Declaration><![CDATA[(*
+
+short summary
+==================
+This test method tests ``ConvertVelocity``
+method of CNM_RecipeHandling library for special cases, 
+it provides the possibility to handover test data via parameter 
+
+
+.. <legal notes>
+
+legal notes
+=================
+| SPDX-FileCopyrightText: © 2025 ekvip automation GmbH <info@ekvip.de>
+| SPDX-License-Identifier: Apache-2.0
+| For details check: Apache-2.0_
+
+.. _Apache-2.0: https://www.apache.org/licenses/LICENSE-2.0
+
+.. </legal notes>
+
+parameters
+==========
+
+*)
+
+METHOD testConvertVelocitySpecialCases
+VAR_INPUT
+    (* Input velocity value to be converted, e.g. 10.0 *)
+    sourceVelocityValue : LREAL; 
+
+    (* Expected result after conversion, used for assertion *)
+    expectedVelocityValue : LREAL;
+
+    (* Unit of distance used in velocity, e.g. METER *)
+    sourceUnit : CNM_RecipeHandling.LengthUnit;
+
+    (* Metric prefix of the distance input, e.g. KILO *)
+    sourceDistancePrefix : CNM_RecipeHandling.MetricPrefixes;
+
+    (* Expected unit of distance after conversion *)
+    expectedDistanceUnit : CNM_RecipeHandling.LengthUnit;
+
+    (* Expected metric prefix for the converted distance *)
+    expectedDistancePrefix : CNM_RecipeHandling.MetricPrefixes;
+
+    (* Unit of time used in velocity, e.g. SECONDS *)
+    sourceDurationUnit : CNM_RecipeHandling.DurationUnit;
+
+    (* Metric prefix of the time input, e.g. MILLI *)
+    sourceDurationPrefix : CNM_RecipeHandling.MetricPrefixes;
+
+    (* Expected time unit after conversion *)
+    expectedDurationUnit : CNM_RecipeHandling.DurationUnit;
+
+    (* Expected time prefix after conversion *)
+    expectedDurationPrefix : CNM_RecipeHandling.MetricPrefixes;
+END_VAR
+VAR
+	sourceDistance : CNM_RecipeHandling.Length;
+	sourceDuration : CNM_RecipeHandling.Duration;
+	sourceVelocity : CNM_RecipeHandling.Velocity;
+	libResult : CNM_RecipeHandling.Velocity;
+	sourcePrefix: CNM_RecipeHandling.MetricPrefixes;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[//test-input
+sourceVelocity.value := sourceVelocityValue;
+sourceVelocity.distanceUnit := sourceUnit;
+sourceVelocity.distancePrefix := sourceDistancePrefix;
+sourceVelocity.timeUnit := sourceDurationUnit;
+sourceVelocity.timePrefix := sourceDurationPrefix; 
+
+sourceDistance.unit := sourceUnit;
+sourceDistance.prefix := sourceDistancePrefix;
+sourceDuration.unit := sourceDurationUnit;
+sourceDuration.prefix := sourceDurationPrefix;
+
+//function to call
+libResult := CNM_RecipeHandling.ConvertVelocity(
+	velocityToConvert:=sourceVelocity,
+	convertDistanceTo :=expectedDistanceUnit,
+	convertTimeTo := expectedDurationUnit,
+	resultPrefixDistance := expectedDistancePrefix,
+	resultPrefixTime := expectedDurationPrefix
+);
+IF Tc2_Utilities.LrealIsNaN(expectedVelocityValue) THEN
+	AssertTrue(Condition := Tc2_Utilities.LrealIsNaN(libResult.value),
+    Message := 'test faild assertion NaN should be true');
+ELSIF NOT (Tc2_Utilities.LrealIsFinite(expectedVelocityValue))THEN
+	 AssertTrue(Condition := NOT(Tc2_Utilities.LrealIsFinite(libResult.value)),
+    Message := 'test faild assertion INF should be True');
+END_IF
+
+]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="testConvertVolume" Id="{70623fc7-2019-4307-a034-3de42ebd2576}" FolderPath="ConvertVolume\">
+      <Declaration><![CDATA[(*
+
+short summary
+==================
+This test method tests ``ConvertVolume``
+method of CNM_RecipeHandling library, 
+it provides the possibility to handover test data via parameter 
+
+
+.. <legal notes>
+
+legal notes
+=================
+| SPDX-FileCopyrightText: © 2025 ekvip automation GmbH <info@ekvip.de>
+| SPDX-License-Identifier: Apache-2.0
+| For details check: Apache-2.0_
+
+.. _Apache-2.0: https://www.apache.org/licenses/LICENSE-2.0
+
+.. </legal notes>
+
+parameters
+==========
+
+*)
+
+METHOD testConvertVolume
+VAR_INPUT
+    (* Input value to be converted, e.g. 1.0 *)
+    sourceValue : LREAL;
+
+    (* The unit of the input volume, e.g. LITER *)
+    sourceUnit : CNM_RecipeHandling.VolumeUnit;
+
+    (* Metric prefix for the input value, e.g. MILLI for milliliters *)
+    sourcePrefix : CNM_RecipeHandling.MetricPrefixes;
+
+    (* The expected result value after conversion *)
+    expectedValue : LREAL;
+
+    (* The expected unit after conversion, e.g. CUBIC_METER *)
+    expectedUnit : CNM_RecipeHandling.VolumeUnit;
+
+    (* The expected prefix for the converted result *)
+    expectedPrefix : CNM_RecipeHandling.MetricPrefixes;
+	
+END_VAR
+VAR
+	sourceVolume : CNM_RecipeHandling.Volume;
+	libResult : CNM_RecipeHandling.Volume;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[sourceVolume.value := sourceValue;
+sourceVolume.unit := sourceUnit;
+sourceVolume.prefix := sourcePrefix;
+
+libResult := CNM_RecipeHandling.ConvertVolume(
+	volumeToConvert :=sourceVolume,
+	convertTo := expectedUnit,
+	resultPrefix := expectedPrefix
+);
+
+THIS^.AssertEquals_LREAL(
+    Expected := expectedValue,
+    Actual := libResult.value,
+    Delta := 0.01,
+   Message := SEL(expectedValue = libResult.value,
+	CONCAT('Volume value fail: exp = ',CONCAT( TO_STRING(expectedValue), concat( ', act = ', TO_STRING(libResult.value))))
+    ,'test is ok'));
+
+THIS^.AssertEquals_INT(
+	Expected := expectedPrefix,
+	Actual := libResult.prefix,
+    Message := SEL(expectedPrefix = libResult.prefix,
+	CONCAT('Volume prefix fail: exp = ',CONCAT( TO_STRING(expectedPrefix), concat( ', act = ', TO_STRING(libResult.prefix))))
+    ,'test is ok')
+);
+
+THIS^.AssertEquals_INT(
+	Expected := expectedUnit,
+	Actual := libResult.unit,
+    Message := SEL(expectedUnit = libResult.unit,
+	CONCAT('Volume unit fail: exp = ',CONCAT( TO_STRING(expectedUnit), concat( ', act = ', TO_STRING(libResult.unit))))
+    ,'test is ok')
+);]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="testConvertVolumeSpecialCases" Id="{4e548ff8-350a-4329-925e-de66a74a3ceb}" FolderPath="ConvertVolume\">
+      <Declaration><![CDATA[(*
+
+short summary
+==================
+This test method tests ``ConvertVolume``
+method of CNM_RecipeHandling library for special cases, 
+it provides the possibility to handover test data via parameter 
+
+
+.. <legal notes>
+
+legal notes
+=================
+| SPDX-FileCopyrightText: © 2025 ekvip automation GmbH <info@ekvip.de>
+| SPDX-License-Identifier: Apache-2.0
+| For details check: Apache-2.0_
+
+.. _Apache-2.0: https://www.apache.org/licenses/LICENSE-2.0
+
+.. </legal notes>
+
+parameters
+==========
+
+*)
+
+METHOD testConvertVolumeSpecialCases
+VAR_INPUT
+    (* Input value to be converted, e.g. 1.0 *)
+    sourceValue : LREAL;
+
+    (* The unit of the input volume, e.g. LITER *)
+    sourceUnit : CNM_RecipeHandling.VolumeUnit;
+
+    (* Metric prefix for the input value, e.g. MILLI for milliliters *)
+    sourcePrefix : CNM_RecipeHandling.MetricPrefixes;
+
+    (* The expected result value after conversion *)
+    expectedValue : LREAL;
+
+    (* The expected unit after conversion, e.g. CUBIC_METER *)
+    expectedUnit : CNM_RecipeHandling.VolumeUnit;
+
+    (* The expected prefix for the converted result *)
+    expectedPrefix : CNM_RecipeHandling.MetricPrefixes;
+END_VAR
+VAR
+	sourceVolume : CNM_RecipeHandling.Volume;
+	libResult : CNM_RecipeHandling.Volume;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[//teat-input
+sourceVolume.value := sourceValue;
+sourceVolume.unit := sourceUnit;
+sourceVolume.prefix := sourcePrefix;
+
+//function to call
+libResult := CNM_RecipeHandling.ConvertVolume(
+	volumeToConvert :=sourceVolume,
+	convertTo := expectedUnit,
+	resultPrefix := expectedPrefix
+);
+IF Tc2_Utilities.LrealIsNaN(expectedValue) THEN
+	AssertTrue(Condition := Tc2_Utilities.LrealIsNaN(libResult.value),
+    Message := 'test faild assertion NaN should be true');
+ELSIF NOT (Tc2_Utilities.LrealIsFinite(expectedValue))THEN
+	 AssertTrue(Condition := NOT(Tc2_Utilities.LrealIsFinite(libResult.value)),
+    Message := 'test faild assertion INF should be True');
+END_IF
+
+]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="testConvertWeight" Id="{8dc134c3-4ad4-49a4-802c-59f0fa5165a7}" FolderPath="ConvertWeight\">
+      <Declaration><![CDATA[(*
+
+short summary
+==================
+This test method tests ``ConvertWeight``
+method of CNM_RecipeHandling library, 
+it provides the possibility to handover test data via parameter 
+
+
+.. <legal notes>
+
+legal notes
+=================
+| SPDX-FileCopyrightText: © 2025 ekvip automation GmbH <info@ekvip.de>
+| SPDX-License-Identifier: Apache-2.0
+| For details check: Apache-2.0_
+
+.. _Apache-2.0: https://www.apache.org/licenses/LICENSE-2.0
+
+.. </legal notes>
+
+parameters
+==========
+
+*)
+
+METHOD testConvertWeight
+VAR_INPUT
+    (* The input weight value to convert, e.g. 1.0 *)
+    sourceWeightValue : LREAL;
+
+    (* The unit of the input weight, e.g. GRAM, KILOGRAM *)
+    sourceWeightUnit : CNM_RecipeHandling.WeightUnit;
+
+    (* Metric prefix for the input weight, e.g. MILLI, KILO *)
+    sourcePrefix : CNM_RecipeHandling.MetricPrefixes;
+
+    (* Expected result value after conversion *)
+    expectedValue : LREAL;
+
+    (* Expected unit of the converted weight *)
+    expectedUnit : CNM_RecipeHandling.WeightUnit;
+
+    (* Expected metric prefix of the result, e.g. NONE, KILO *)
+    expectedPrefix : CNM_RecipeHandling.MetricPrefixes;
+END_VAR
+VAR
+	sourceWeight : CNM_RecipeHandling.Weight;
+	libResult : CNM_RecipeHandling.Weight;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[sourceWeight.value := sourceWeightValue;
+sourceWeight.unit := sourceWeightUnit;
+sourceWeight.prefix := sourcePrefix;
+
+libResult := CNM_RecipeHandling.ConvertWeight(
+	weightToConvert := sourceWeight,
+	convertTo := expectedUnit,
+	resultPrefix := expectedPrefix
+);
+
+THIS^.AssertEquals_LREAL(
+    Expected := expectedValue,
+    Actual := libResult.value,
+    Delta := 0.01,
+   Message := SEL(expectedValue = libResult.value,
+	CONCAT('value fail: exp Weight = ',CONCAT( TO_STRING(expectedValue), concat( ', act Weight = ', TO_STRING(libResult.value))))
+    ,'test is ok'));
+
+THIS^.AssertEquals_INT(
+	Expected := expectedPrefix,
+	Actual := libResult.prefix,
+    Message := SEL(expectedPrefix = libResult.prefix,
+	CONCAT('Weight prefix fail: exp = ',CONCAT( TO_STRING(expectedPrefix), concat( ', act = ', TO_STRING(libResult.prefix))))
+    ,'test is ok')
+);
+
+THIS^.AssertEquals_INT(
+	Expected := expectedUnit,
+	Actual := libResult.unit,
+    Message := SEL(expectedUnit = libResult.unit,
+	CONCAT('Weight unit fail: exp = ',CONCAT( TO_STRING(expectedUnit), concat( ', act = ', TO_STRING(libResult.unit))))
+    ,'Weight test is ok')
+);]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="testConvertWightSpecialCases" Id="{d3900fc1-b0ff-457d-bc94-17041a8dba3a}" FolderPath="ConvertWeight\">
+      <Declaration><![CDATA[(*
+
+short summary
+==================
+This test method tests ``ConvertWeight``
+method of CNM_RecipeHandling library for special cases, 
+it provides the possibility to handover test data via parameter 
+
+
+.. <legal notes>
+
+legal notes
+=================
+| SPDX-FileCopyrightText: © 2025 ekvip automation GmbH <info@ekvip.de>
+| SPDX-License-Identifier: Apache-2.0
+| For details check: Apache-2.0_
+
+.. _Apache-2.0: https://www.apache.org/licenses/LICENSE-2.0
+
+.. </legal notes>
+
+parameters
+==========
+
+*)
+
+METHOD testConvertWightSpecialCases
+VAR_INPUT
+    (* The input weight value to convert, e.g. 1.0 *)
+    sourceWeightValue : LREAL;
+
+    (* The unit of the input weight, e.g. GRAM, KILOGRAM *)
+    sourceWeightUnit : CNM_RecipeHandling.WeightUnit;
+
+    (* Metric prefix for the input weight, e.g. MILLI, KILO *)
+    sourcePrefix : CNM_RecipeHandling.MetricPrefixes;
+
+    (* Expected result value after conversion *)
+    expectedValue : LREAL;
+
+    (* Expected unit of the converted weight *)
+    expectedUnit : CNM_RecipeHandling.WeightUnit;
+
+    (* Expected metric prefix of the result, e.g. NONE, KILO *)
+    expectedPrefix : CNM_RecipeHandling.MetricPrefixes;
+END_VAR
+VAR
+	sourceWeight : CNM_RecipeHandling.Weight;
+	libResult : CNM_RecipeHandling.Weight;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[sourceWeight.value := sourceWeightValue;
+sourceWeight.unit := sourceWeightUnit;
+sourceWeight.prefix := sourcePrefix;
+
+libResult := CNM_RecipeHandling.ConvertWeight(
+	weightToConvert := sourceWeight,
+	convertTo := expectedUnit,
+	resultPrefix := expectedPrefix
+);
+
+IF Tc2_Utilities.LrealIsNaN(expectedValue) THEN
+	AssertTrue(Condition := Tc2_Utilities.LrealIsNaN(libResult.value),
+    Message := 'test faild assertion NaN should be true');
+ELSIF NOT (Tc2_Utilities.LrealIsFinite(expectedValue))THEN
+	 AssertTrue(Condition := NOT(Tc2_Utilities.LrealIsFinite(libResult.value)),
+    Message := 'test faild assertion INF should be True');
+END_IF
+
+]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="testFastPow10" Id="{931a1a18-2ee0-4e1e-ba0b-d1806a93fb7f}" FolderPath="FastPow10\">
+      <Declaration><![CDATA[(*
+
+short summary
+==================
+This test method tests ``CalculateVelocity``
+method of CNM_RecipeHandling library, 
+it provides the possibility to handover test data via parameter 
+
+
+.. <legal notes>
+
+legal notes
+=================
+| SPDX-FileCopyrightText: © 2025 ekvip automation GmbH <info@ekvip.de>
+| SPDX-License-Identifier: Apache-2.0
+| For details check: Apache-2.0_
+
+.. _Apache-2.0: https://www.apache.org/licenses/LICENSE-2.0
+
+.. </legal notes>
+
+parameters
+==========
+
+*)
+
+METHOD testFastPow10
+VAR_INPUT
+    (* The exponent to be tested, e.g. 3 for 10^3 *)
+    exponentValue : INT;
+
+    (* The expected result of 10 raised to the given exponent *)
+    expectedFastPow10Value : LREAL;
+END_VAR
+VAR
+	sourceExponenet : INT ;
+	libResult : LREAL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[sourceExponenet := exponentValue;
+
+libResult := CNM_RecipeHandling.FastPow10(
+	exponent :=sourceExponenet,
+);
+
+THIS^.AssertEquals_LREAL(
+    Expected := expectedFastPow10Value,
+    Actual := libResult,
+    Delta := 0.01,
+   Message := SEL(expectedFastPow10Value = libResult,
+	CONCAT('value fail: exp FastPow10 = ',CONCAT( TO_STRING(expectedFastPow10Value), concat( ', act FastPow10 value = ', TO_STRING(libResult))))
+    ,'test is ok'));]]></ST>
+      </Implementation>
+    </Method>
+  </POU>
+</TcPlcObject>

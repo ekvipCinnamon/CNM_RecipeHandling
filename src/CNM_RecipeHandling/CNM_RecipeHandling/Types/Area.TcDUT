@@ -1,0 +1,32 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1">
+  <DUT Name="Area" Id="{417b3926-b447-4f74-8db2-1bfc431a42a8}">
+    <Declaration><![CDATA[(*
+
+## Short summary
+
+A datatype for areas based on physical units. It can be converted to other units with the function CNM_RecipeHandling.ConvertArea. 
+
+.. <legal notes>
+
+legal notes
+=================
+| SPDX-FileCopyrightText: © 2025 ekvip automation GmbH <info@ekvip.de>
+| SPDX-License-Identifier: Apache-2.0
+| For details check: Apache-2.0_
+
+.. _Apache-2.0: https://www.apache.org/licenses/LICENSE-2.0
+
+.. </legal notes>	
+
+*)
+
+TYPE Area EXTENDS MetricParameter:
+STRUCT
+	(* the area unit *)
+	unit :AreaUnit := AreaUnit.SQUARE_METER;
+END_STRUCT
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

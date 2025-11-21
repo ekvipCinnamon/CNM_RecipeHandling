@@ -1,0 +1,38 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1">
+  <DUT Name="AngleUnit" Id="{5af2b518-8f7c-43bb-b484-9f8c113c42b1}">
+    <Declaration><![CDATA[(*
+
+## Short summary
+
+This enumeration contains common angular units including radians, degrees, arc minutes, and arc seconds.
+
+.. <legal notes>
+
+legal notes
+=================
+| SPDX-FileCopyrightText: © 2025 ekvip automation GmbH <info@ekvip.de>
+| SPDX-License-Identifier: Apache-2.0
+| For details check: Apache-2.0_
+
+.. _Apache-2.0: https://www.apache.org/licenses/LICENSE-2.0
+
+.. </legal notes>	
+
+*)
+
+{attribute 'qualified_only'}
+{attribute 'to_string'}
+TYPE AngleUnit :
+(
+	RADIANS := 0,
+	DEGREES,
+	ARC_MINUTES,
+	ARC_SECONDS,
+	GRADIANS,
+	TURNS
+);
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

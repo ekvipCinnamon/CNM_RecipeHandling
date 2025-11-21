@@ -1,0 +1,64 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1">
+  <POU Name="ConvertLength" Id="{38322c03-e609-4bf9-ba8c-f6fb073cd679}" SpecialFunc="None">
+    <Declaration><![CDATA[(*
+
+## Short summary
+
+This function can be used to convert distances from one physical length unit into another. The value will change corresponding to the conversion.
+**Example:**  
+1 m =  39.3701 inches = 3.28084167 feet = 1.093613889 yard = 0.00062137 miles
+
+.. <legal notes>
+
+legal notes
+=================
+| SPDX-FileCopyrightText: © 2025 ekvip automation GmbH <info@ekvip.de>
+| SPDX-License-Identifier: Apache-2.0
+| For details check: Apache-2.0_
+
+.. _Apache-2.0: https://www.apache.org/licenses/LICENSE-2.0
+
+.. </legal notes>
+
+
+
+**Return:** CNM_RecipeHandling.Length: a copy of the given length converted into the desired unit
+	
+
+*)
+
+FUNCTION ConvertLength : Length
+VAR_IN_OUT CONSTANT
+	(* the length that should be converted *)
+	lengthToConvert :Length;
+END_VAR
+VAR_INPUT
+	(* the physical length unit it should be converted to *)
+	convertTo :LengthUnit := LengthUnit.METER;
+	(* the metrical prefix (for SI units) *)
+	resultPrefix :MetricPrefixes := MetricPrefixes.NONE;
+END_VAR
+VAR
+	factor :LREAL;
+	exponent :INT := 1;
+END_VAR
+VAR CONSTANT
+	(* length convertions related to meter *)
+	LENGTHS : ARRAY[LengthUnit.METER..LengthUnit.US_MILE] OF LREAL := [1.0, 2.54E-5, 0.0254, 0.3048, 0.9144, 1609.34];
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[factor := LENGTHS[lengthToConvert.unit] / LENGTHS[convertTo];
+exponent := lengthToConvert.prefix - resultPrefix;
+ConvertLength.prefix := resultPrefix;
+ConvertLength.unit := convertTo;
+IF CheckValueIsANumber(lengthToConvert.value) THEN
+	ConvertLength.value := lengthToConvert.value * factor * FastPow10(exponent);
+ELSE
+	ConvertLength.value := lengthToConvert.value;
+END_IF
+]]></ST>
+    </Implementation>
+  </POU>
+</TcPlcObject>

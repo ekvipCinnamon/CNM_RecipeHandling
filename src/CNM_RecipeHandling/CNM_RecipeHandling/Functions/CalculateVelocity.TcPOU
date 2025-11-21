@@ -1,0 +1,68 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1">
+  <POU Name="CalculateVelocity" Id="{8d7c9a0a-e316-4dd4-a871-a5cd3d41654a}" SpecialFunc="None">
+    <Declaration><![CDATA[(*
+
+## Short summary
+
+This function can be used to calculate a veloctiy from given distance and time deltas.
+
+.. <legal notes>
+
+legal notes
+=================
+| SPDX-FileCopyrightText: © 2025 ekvip automation GmbH <info@ekvip.de>
+| SPDX-License-Identifier: Apache-2.0
+| For details check: Apache-2.0_
+
+.. _Apache-2.0: https://www.apache.org/licenses/LICENSE-2.0
+
+.. </legal notes>
+
+
+
+**Return:** the calculated velocity in METER per SECOND
+	
+
+*)
+FUNCTION CalculateVelocity : Velocity
+VAR_IN_OUT
+	(* the distance to travel *)
+	distanceDelta :Length;
+	(* the time it needs to travel *)
+	timeDelta :Duration; 
+END_VAR
+VAR
+	tmpDistance :Length;
+	tmpTime :Duration;
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[// return if we are not able to calculate
+RETURN(
+		(timeDelta.value = 0.0) // we cannot divide by zero without destroying the universe
+	OR_ELSE 
+		NOT CheckValueIsANumber(distanceDelta.value)
+	OR_ELSE 
+		NOT CheckValueIsANumber(timeDelta.value)
+);
+
+IF (	(distanceDelta.unit = LengthUnit.METER)
+	AND_THEN
+		(distanceDelta.prefix = MetricPrefixes.NONE)
+	AND_THEN
+		(timeDelta.unit = DurationUnit.SECONDS)
+	AND_THEN
+		(timeDelta.prefix = MetricPrefixes.NONE)
+	)
+THEN
+	CalculateVelocity.value := distanceDelta.value / timeDelta.value;
+ELSE
+	tmpDistance := ConvertLength(distanceDelta);
+	tmpTime := ConvertDuration(timeDelta);
+	CalculateVelocity.value := tmpDistance.value / tmpTime.value;
+END_IF
+]]></ST>
+    </Implementation>
+  </POU>
+</TcPlcObject>

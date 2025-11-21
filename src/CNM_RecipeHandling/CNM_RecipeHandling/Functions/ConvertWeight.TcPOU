@@ -1,0 +1,64 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1">
+  <POU Name="ConvertWeight" Id="{91476194-901c-470f-8098-ad5757388af3}" SpecialFunc="None">
+    <Declaration><![CDATA[(*
+
+## Short summary
+
+This function can be used to convert weights from one physical weight unit into another. The value will change corresponding to the conversion.
+**Example:**  
+10 g =  154,324 US grain = 0.35274 US ounces = 0.564382 US dram = 0.01 kg = 0.00220462 US pounds
+
+.. <legal notes>
+
+legal notes
+=================
+| SPDX-FileCopyrightText: © 2025 ekvip automation GmbH <info@ekvip.de>
+| SPDX-License-Identifier: Apache-2.0
+| For details check: Apache-2.0_
+
+.. _Apache-2.0: https://www.apache.org/licenses/LICENSE-2.0
+
+.. </legal notes>
+
+
+
+**Return:** CNM_RecipeHandling.Weight: a copy of the given weight converted into the desired unit
+	
+
+*)
+
+FUNCTION ConvertWeight : Weight
+VAR_IN_OUT CONSTANT
+	(* the weight that should be converted *)
+	weightToConvert :Weight;
+END_VAR
+VAR_INPUT
+	(* the physical weight unit it should be converted to *)
+	convertTo :WeightUnit := WeightUnit.GRAM;
+	(* the metrical prefix (for SI units) *)
+	resultPrefix :MetricPrefixes := MetricPrefixes.NONE;
+END_VAR
+VAR
+	factor :LREAL;
+	exponent :INT := 1;
+END_VAR
+VAR CONSTANT
+	(* weight convertions related to gram: gram, ton, US grain, US dram, US ounce, US pound, US ton *)
+	WEIGTHS : ARRAY[WeightUnit.GRAM..WeightUnit.US_TON] OF LREAL := [1.0, 1.0E6, 64.79891E-3, 1.771845195, 28.349523125, 453.59237, 907.18474E3 ];
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[factor := WEIGTHS[weightToConvert.unit] / WEIGTHS[convertTo];
+exponent := weightToConvert.prefix - resultPrefix;
+ConvertWeight.prefix := resultPrefix;
+ConvertWeight.unit := convertTo;
+IF CheckValueIsANumber(weightToConvert.value) THEN
+	ConvertWeight.value := weightToConvert.value * factor * FastPow10(exponent);
+ELSE
+	ConvertWeight.value := weightToConvert.value;
+END_IF
+]]></ST>
+    </Implementation>
+  </POU>
+</TcPlcObject>

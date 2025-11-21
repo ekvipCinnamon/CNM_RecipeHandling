@@ -1,0 +1,31 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1">
+  <DUT Name="MetricParameter" Id="{0be20172-a478-4d20-895e-4633e4d3809d}">
+    <Declaration><![CDATA[(*
+
+## Short summary
+
+A basic datatype for metrical physical parameters. It extends the CNM_RecipeHandling.BaseParameter with a metric prefix. 
+
+.. <legal notes>
+
+legal notes
+=================
+| SPDX-FileCopyrightText: © 2025 ekvip automation GmbH <info@ekvip.de>
+| SPDX-License-Identifier: Apache-2.0
+| For details check: Apache-2.0_
+
+.. _Apache-2.0: https://www.apache.org/licenses/LICENSE-2.0
+
+.. </legal notes>	
+
+*)
+
+TYPE MetricParameter EXTENDS BaseParameter :
+STRUCT
+	prefix :MetricPrefixes := MetricPrefixes.NONE;
+END_STRUCT
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

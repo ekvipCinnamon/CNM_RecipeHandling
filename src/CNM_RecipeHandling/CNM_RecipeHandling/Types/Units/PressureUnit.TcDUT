@@ -1,0 +1,36 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1">
+  <DUT Name="PressureUnit" Id="{4245a067-1b3f-47bb-9cb5-50dce62f5702}">
+    <Declaration><![CDATA[(*
+
+## Short summary
+
+This enumeration contains common physical pressure units.
+
+.. <legal notes>
+
+legal notes
+=================
+| SPDX-FileCopyrightText: © 2025 ekvip automation GmbH <info@ekvip.de>
+| SPDX-License-Identifier: Apache-2.0
+| For details check: Apache-2.0_
+
+.. _Apache-2.0: https://www.apache.org/licenses/LICENSE-2.0
+
+.. </legal notes>	
+
+*)
+
+{attribute 'qualified_only'}
+{attribute 'to_string'}
+TYPE PressureUnit :
+(
+	PASCAL := 0,
+	BAR,
+	(* pound per square inch *)
+	PSI
+);
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

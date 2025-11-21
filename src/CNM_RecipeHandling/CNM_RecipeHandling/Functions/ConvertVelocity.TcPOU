@@ -1,0 +1,73 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1">
+  <POU Name="ConvertVelocity" Id="{f70ecce5-cc0f-4e02-913c-030d9a4e6cf8}" SpecialFunc="None">
+    <Declaration><![CDATA[(*
+
+## Short summary
+
+This function can be used to convert velocities from one unit into another. The value will change corresponding to the conversion.
+**Example:**  
+1 m/s =  0.001 km/s = 3.6 km/h = 2.23694 miles/h
+
+.. <legal notes>
+
+legal notes
+=================
+| SPDX-FileCopyrightText: © 2025 ekvip automation GmbH <info@ekvip.de>
+| SPDX-License-Identifier: Apache-2.0
+| For details check: Apache-2.0_
+
+.. _Apache-2.0: https://www.apache.org/licenses/LICENSE-2.0
+
+.. </legal notes>
+
+
+
+**Return:** CNM_RecipeHandling.Velocity: a copy of the given velocity converted into the desired unit
+	
+
+*)
+
+FUNCTION ConvertVelocity : Velocity
+VAR_IN_OUT CONSTANT
+	(* the velocity that should be converted *)
+	velocityToConvert :Velocity;
+END_VAR
+VAR_INPUT
+	(* the physical length unit it should be converted to *)
+	convertDistanceTo :LengthUnit := LengthUnit.METER;
+	(* the physical time unit it should be converted to *)
+	convertTimeTo :DurationUnit := DurationUnit.SECONDS;
+	(* the metrical prefix for the distance (for SI units) *)
+	resultPrefixDistance :MetricPrefixes := MetricPrefixes.NONE;
+	(* the metrical prefix for the time *)
+	resultPrefixTime :MetricPrefixes := MetricPrefixes.NONE;
+END_VAR
+VAR
+	factorLength, factorTime :LREAL;
+	exponent :INT := 1;
+END_VAR
+VAR CONSTANT
+	(* length convertions related to meter *)
+	LENGTHS : ARRAY[LengthUnit.METER..LengthUnit.US_MILE] OF LREAL := [1.0, 2.54E-5, 0.0254, 0.3048, 0.9144, 1609.34];
+	(* duration convertions related to seconds *)
+	DURATIONS : ARRAY[DurationUnit.SECONDS..DurationUnit.WEEK] OF LREAL := [1.0, 60.0, 3600.0, 86400.0, 604800.0];
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[factorLength := LENGTHS[velocityToConvert.distanceUnit] / LENGTHS[convertDistanceTo];
+factorTime := DURATIONS[velocityToConvert.timeUnit] / DURATIONS[convertTimeTo];
+exponent := velocityToConvert.distancePrefix - resultPrefixDistance - velocityToConvert.timePrefix + resultPrefixTime;
+ConvertVelocity.distanceUnit := convertDistanceTo;
+ConvertVelocity.distancePrefix := resultPrefixDistance;
+ConvertVelocity.timeUnit := convertTimeTo;
+ConvertVelocity.timePrefix := resultPrefixTime;
+IF CheckValueIsANumber(velocityToConvert.value) THEN
+	ConvertVelocity.value := velocityToConvert.value * factorLength/factorTime * FastPow10(exponent);
+ELSE
+	ConvertVelocity.value := velocityToConvert.value;
+END_IF
+]]></ST>
+    </Implementation>
+  </POU>
+</TcPlcObject>

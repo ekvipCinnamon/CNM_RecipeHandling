@@ -1,0 +1,57 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1">
+  <DUT Name="MetricPrefixes" Id="{0fdacb53-d107-4dfa-98b1-6569d7c74604}">
+    <Declaration><![CDATA[(*
+
+## Short summary
+
+This is an enumeration for metric prefixes. The value after an enum entry corresponds to the power of ten of the respective prefix. 
+
+.. <legal notes>
+
+legal notes
+=================
+| SPDX-FileCopyrightText: © 2025 ekvip automation GmbH <info@ekvip.de>
+| SPDX-License-Identifier: Apache-2.0
+| For details check: Apache-2.0_
+
+.. _Apache-2.0: https://www.apache.org/licenses/LICENSE-2.0
+
+.. </legal notes>	
+
+*)
+
+{attribute 'qualified_only'}
+{attribute 'to_string'}
+TYPE MetricPrefixes :
+(
+	QUECTO := -30,
+	RONTO := -27 ,
+	YOCTO := -24 ,
+	ZEPTO := -21 ,
+	ATTO := -18  ,
+	FEMTO := -15 ,
+	PICO := -12  ,
+	NANO := -9   ,
+	MICRO := -6  ,
+	MILLI := -3  ,
+	CENTI := -2  ,
+	DECI := -1   ,
+	NONE := 0    ,
+	DEKA := 1    ,
+	HECTO := 2   ,
+	KILO := 3    ,
+	MEGA := 6    ,
+	GIGA := 9    ,
+	TERA := 12   ,
+	PETA := 15   ,
+	EXA := 18    ,
+	ZETTA := 21  ,
+	YOTTA := 24  ,
+	RONNA := 27  ,
+	QUETTA := 30 
+) INT ;
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

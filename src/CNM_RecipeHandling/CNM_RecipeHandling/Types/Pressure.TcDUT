@@ -1,0 +1,31 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1">
+  <DUT Name="Pressure" Id="{9ba26c0f-fe93-4c1f-b627-1ce7d740caf1}">
+    <Declaration><![CDATA[(*
+
+## Short summary
+
+A datatype for pressures based on physical units. It can be converted to other units with the function CNM_RecipeHandling.ConvertPressure. 
+
+.. <legal notes>
+
+legal notes
+=================
+| SPDX-FileCopyrightText: © 2025 ekvip automation GmbH <info@ekvip.de>
+| SPDX-License-Identifier: Apache-2.0
+| For details check: Apache-2.0_
+
+.. _Apache-2.0: https://www.apache.org/licenses/LICENSE-2.0
+
+.. </legal notes>	
+
+*)
+
+TYPE Pressure EXTENDS MetricParameter :
+STRUCT
+	unit :PressureUnit := PressureUnit.PASCAL;
+END_STRUCT
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

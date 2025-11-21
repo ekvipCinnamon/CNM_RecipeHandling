@@ -1,0 +1,87 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1">
+  <POU Name="ConvertTemperature" Id="{688cb2ce-ebb3-42d3-9d40-6391180ea3c7}" SpecialFunc="None">
+    <Declaration><![CDATA[(*
+
+## Short summary
+
+This function can be used to convert temperatures from one temperature scale into another. The value will change corresponding to the conversion.
+**Example:**  
+300 K = 26.85°C = 80.33 °F
+
+.. <legal notes>
+
+legal notes
+=================
+| SPDX-FileCopyrightText: © 2025 ekvip automation GmbH <info@ekvip.de>
+| SPDX-License-Identifier: Apache-2.0
+| For details check: Apache-2.0_
+
+.. _Apache-2.0: https://www.apache.org/licenses/LICENSE-2.0
+
+.. </legal notes>
+
+
+
+**Return:** CNM_RecipeHandling.Temprature: a copy of the given temperature converted into the desired scale
+	
+
+*)
+
+FUNCTION ConvertTemperature : Temperature
+VAR_IN_OUT CONSTANT
+	(* the temperature that should be converted *)
+	temperatureToConvert :Temperature;
+END_VAR
+VAR_INPUT
+	(* the temperature scale unit it should be converted to *)
+	convertTo :TemperatureUnit := TemperatureUnit.KELVIN;
+END_VAR
+VAR CONSTANT
+	CELSIUS_OFFSET :LREAL := 273.15;
+	FAHRENHEIT_OFFSET :LREAL := 32.0;
+	FAHRENHEIT_FACTOR :LREAL := 1.8;
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[ConvertTemperature.unit := convertTo;
+IF (NOT CheckValueIsANumber(temperatureToConvert.value)) THEN
+	ConvertTemperature.value := temperatureToConvert.value;
+	RETURN;
+END_IF
+
+CASE temperatureToConvert.unit OF
+TemperatureUnit.KELVIN:
+	CASE convertTo OF
+	TemperatureUnit.DEGREE_CELSIUS:
+		ConvertTemperature.value := temperatureToConvert.value - CELSIUS_OFFSET;
+	TemperatureUnit.DEGREE_FAHRENHEIT:
+		ConvertTemperature.value := ((temperatureToConvert.value - CELSIUS_OFFSET) * FAHRENHEIT_FACTOR) + FAHRENHEIT_OFFSET;
+	ELSE
+		ConvertTemperature.value := temperatureToConvert.value;
+	END_CASE
+TemperatureUnit.DEGREE_CELSIUS:
+	CASE convertTo OF
+	TemperatureUnit.KELVIN:
+		ConvertTemperature.value := temperatureToConvert.value + CELSIUS_OFFSET;
+	TemperatureUnit.DEGREE_FAHRENHEIT:
+		ConvertTemperature.value := (temperatureToConvert.value * FAHRENHEIT_FACTOR) + FAHRENHEIT_OFFSET;
+	ELSE
+		ConvertTemperature.value := temperatureToConvert.value;
+	END_CASE
+TemperatureUnit.DEGREE_FAHRENHEIT:
+	CASE convertTo OF
+	TemperatureUnit.KELVIN:
+		ConvertTemperature.value := (temperatureToConvert.value - FAHRENHEIT_OFFSET)/FAHRENHEIT_FACTOR + CELSIUS_OFFSET;
+	TemperatureUnit.DEGREE_CELSIUS:
+		ConvertTemperature.value := (temperatureToConvert.value - FAHRENHEIT_OFFSET)/FAHRENHEIT_FACTOR;
+	ELSE
+		ConvertTemperature.value := temperatureToConvert.value;
+	END_CASE
+ELSE
+	ConvertTemperature.value := temperatureToConvert.value;
+END_CASE
+]]></ST>
+    </Implementation>
+  </POU>
+</TcPlcObject>

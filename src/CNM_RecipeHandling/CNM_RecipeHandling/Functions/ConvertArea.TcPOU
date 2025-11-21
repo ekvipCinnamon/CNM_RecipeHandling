@@ -1,0 +1,80 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1">
+  <POU Name="ConvertArea" Id="{dcd0124e-edda-457a-82cf-2aa4ed2719d8}" SpecialFunc="None">
+    <Declaration><![CDATA[(*
+
+## Short summary
+
+This function can be used to convert areas from one physical unit into another. The value will change corresponding to the conversion.
+**Example:** 
+1 square meter =  1E-6 square kilometer = 1550 square inch = 10.7639 square foot = 1.19599 square yard.
+
+.. <legal notes>
+
+legal notes
+=================
+| SPDX-FileCopyrightText: © 2025 ekvip automation GmbH <info@ekvip.de>
+| SPDX-License-Identifier: Apache-2.0
+| For details check: Apache-2.0_
+
+.. _Apache-2.0: https://www.apache.org/licenses/LICENSE-2.0
+
+.. </legal notes>
+
+
+
+**Return:** CNM_RecipeHandling.Area: a copy of the given area converted into the desired unit
+	
+*)
+
+FUNCTION ConvertArea : Area
+VAR_IN_OUT CONSTANT
+	(* the area that should be converted *)
+	areaToConvert :Area;
+END_VAR
+VAR_INPUT
+	(* the physical unit it should be converted to *)
+	convertTo :AreaUnit := AreaUnit.SQUARE_METER;
+	(* the metrical prefix (for SI units) *)
+	resultPrefix :MetricPrefixes := MetricPrefixes.NONE;
+END_VAR
+VAR
+	factor :LREAL;
+	exponent :INT := 1;
+END_VAR
+VAR CONSTANT
+	(* area convertions related to squaremeter: square inch, square foot, square yard, acre *)
+	AREAS : ARRAY[AreaUnit.SQUARE_METER..AreaUnit.HECTARE] OF LREAL := [
+		1.0,  			// in square meter
+		0.00064516, 	// in square inch
+		0.0929034, 		// in square foot
+		0.83612736, 	// in square yard
+		4046.873,		// in us acre,
+		10000.0			// in hectare
+	];
+	(* mapping that returns the correct exponentiation factor for sqared or linear units *)
+	UNIT_SPECIFIC_FACTOR :ARRAY[AreaUnit.SQUARE_METER..AreaUnit.HECTARE] OF USINT := [	
+		2,  	// in square meter
+		2, 		// in square inch
+		2, 		// in square foot
+		2, 		// in square yard
+		1, 		// in us acre,
+		1		// in hectare
+	]; 
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[factor := AREAS[areaToConvert.unit] / AREAS[convertTo];
+exponent := ((UNIT_SPECIFIC_FACTOR[areaToConvert.unit] * areaToConvert.prefix) 
+			- ( UNIT_SPECIFIC_FACTOR[convertTo] * resultPrefix));
+ConvertArea.prefix := resultPrefix;
+ConvertArea.unit := convertTo;
+IF CheckValueIsANumber(areaToConvert.value) THEN
+	ConvertArea.value := areaToConvert.value * factor * FastPow10(exponent);
+ELSE
+	ConvertArea.value := areaToConvert.value;
+END_IF
+ ]]></ST>
+    </Implementation>
+  </POU>
+</TcPlcObject>
