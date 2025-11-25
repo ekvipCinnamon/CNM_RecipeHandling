@@ -11,7 +11,7 @@ This is a TwinCAT 3 library project for recipe handling and machine settings.
 
 ## Documentation Location
 
-You will find the detailed library documentation at the [cinnamon docs](https://static.ekvip.de/docs/CNM_CycleManagerInterfaces/0.1.1.0/)
+You will find the detailed library documentation at the [cinnamon docs](https://static.ekvip.de/docs/CNM_RecipeHandling/0.1.1.0/)
 
 ## Purpose
 
