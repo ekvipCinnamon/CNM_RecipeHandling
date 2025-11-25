@@ -1,0 +1,132 @@
+{
+	"$schema": "http://cyclonedx.org/schema/bom-1.7.schema.json",
+	"bomFormat": "CycloneDX",
+	"specVersion": "1.7",
+	"serialNumber": "urn:uuid:089330bc-ec63-4766-b005-daa7e5d64049",
+	"version": 1,
+	"metadata": {
+		"timestamp": "2025-11-25T13:41:23.115Z",
+		"lifecycles": [
+			{
+				"phase": "build"
+			}
+		],
+		"tools": {
+			"components": [
+				{
+					"type": "application",
+					"name": "TwinCAT XAE Shell",
+					"version": "4.7.4.0",
+					"description": "The main IDE shell environment",
+					"supplier": {
+						"name": "Beckhoff Automation GmbH & Co. KG"
+					}
+				},
+				{
+					"type": "application",
+					"name": "TwinCAT XAE Base (Build)",
+					"version": "3.1.4026.19",
+					"description": "Basic configuration components for the TwinCAT XAE",
+					"supplier": {
+						"name": "Beckhoff Automation GmbH & Co. KG"
+					},
+					"properties": [
+						{
+							"name": "ekvip:build-requirement",
+							"value": ">=3.1.4026.19"
+						}
+					],
+					"purl": "pkg:twincat/beckhoff/xae_base@3.1.4026.19"
+				}
+			]
+		},
+		"authors": [
+			{
+				"name": "ekvip automation GmbH"
+			}
+		],
+		"supplier": {
+			"name": "ekvip automation GmbH",
+			"url": [
+				"https://ekvip.de"
+			],
+			"contact": [
+				{
+					"email": "info@ekvip.de"
+				}
+			]
+		},
+		"component": {
+			"bom-ref": "CNM_RecipeHandling",
+			"type": "library",
+			"name": "cnm4026-abstract-object-lib",
+			"version": "1.0.0.0",
+			"description": "",
+			"licenses": [
+				{
+					"license": {
+						"id": "Apache-2.0"
+					}
+				}
+			],
+			"copyright": "© 2025 ekvip automation GmbH <info@ekvip.de>",
+			"externalReferences": [
+				{
+					"type": "vcs",
+					"url": "https://github.com/ekvipCinnamon/CNM_RecipeHandling",
+					"comment": "Source code repository"
+				},
+				{
+					"type": "documentation",
+					"url": "https://static.ekvip.de/docs/CNM_RecipeHandling/1.0.0.0",
+					"comment": "Library documentation"
+				},
+				{
+					"type": "license",
+					"url": "https://www.apache.org/licenses/LICENSE-2.0",
+					"comment": "Apache License 2.0"
+				}
+			],
+			"properties": [],
+			"tags": [
+				"twincat",
+				"twincat3",
+				"plc",
+				"iec-61131-3",
+				"industrial-automation",
+				"oop"
+			]
+		}
+	},
+	"components": [
+		{
+			"bom-ref": "Tc2_Utilities",
+			"type": "library",
+			"name": "Tc2_Utilities",
+			"version": "3.10.*",
+			"description": "",
+			"supplier": {
+				"name": "Beckhoff Automation GmbH"
+			}
+		}
+	],
+	"dependencies": [
+		{
+			"ref": "CNM_RecipeHandling",
+			"dependsOn": [
+				"Tc2_Utilities"
+			]
+		}
+	],
+	"compositions": [
+		{
+			"aggregate": "complete",
+			"assemblies": [
+				"CNM_RecipeHandling"
+			],
+			"dependencies": [
+				"Tc2_Utilities"
+			]
+		}
+	]
+}
